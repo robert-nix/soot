@@ -57,7 +57,9 @@ cause it looks nicer.
 - `(target-random)`; while (target ...) will require input from the user if more
 than one viable target is found, (target-random ...) will choose randomly from
 viable targets.  if a number is supplied to the filter coll for target-random,
-that number of ''unique'' targets will be chosen.
+that number of ''unique'' targets will be chosen.  a second expr may be supplied
+`(target-random filter expr fallback)` that is called for the times where a
+viable target does not exist.
 - `(target-all)`; (target-all ...) applies expr to every viable target, not just
 one.
 
@@ -72,3 +74,12 @@ spells can be numbers or strings referring to ids or names of the spell to cast
 minions is an optional battlecry, but on spells the spell effect branches based
 on combo state, so it's sometimes helpful to describe it as a branch instead of
 as a property of the card (although :combo can be used on spells as well)
+
+### verbs on cards
+
+- draw-: undrawn -> drawn
+- summon-: (undrawn, drawn, nil) -> played; summon- is often called with a
+string, number, or collection of strings/numbers, in which case cards are
+created before being summoned.
+- play-: drawn -> played
+- return-: played -> drawn

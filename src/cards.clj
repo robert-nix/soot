@@ -167,7 +167,7 @@
   :minion {
     :attack 5
     :health 8
-    :battlecry (choose "Demigod's Favor" "Shando's Lesson")
+    :battlecry (choose "Demigod's Favor" "Shan'do's Lesson")
       ; (target-all [:my :minion] (buff-target 2 2))
       ; (summon-minion [181 181])) ; 181 = Taunt Treant
   }
@@ -718,9 +718,9 @@
   :quality :epic
   :class :shaman
   :cost 3
-  :spell (comp
-    #((modify-card-cost (last-card-drawn %) (partial + -3)) %)
-    (draw-cards 1))
+  :spell (target-random [:my :undrawn] #(-> %
+    (give-target {:cost -3})
+    (draw-target)))
 }
 {
   :id 237
@@ -788,7 +788,7 @@
   :minion {
     :attack 5
     :health 5
-    :combo (target :minion (return-to-hand))
+    :combo (target :minion (return-target))
   }
 }
 {
@@ -805,9 +805,9 @@
   :quality :epic
   :class :priest
   :cost 4
-  :spell #(if (> (count (filter-all % [:opponent :undrawn :minion])) 0)
-    ((summon-minion (rand-nth (filter-all % [:opponent :undrawn :minion]))) %)
-    ((summon-minion 582) %)) ; 582 = Shadow of Nothing
+  :spell (target-random [1 :opponent :undrawn :minion]
+    #(-> % (summon-minion (current-target %)))
+    (summon-minion "Shadow of Nothing"))
 }
 {
   :id 94
@@ -1992,7 +1992,7 @@
     :attack 5
     :health 4
     :battlecry (target [:my :minion]
-      (return-to-hand))
+      (return-target))
   }
 }
 {
@@ -2338,7 +2338,7 @@
   :name "Dream"
   :quality :common
   :cost 0
-  :spell (target [:minion] (return-to-hand))
+  :spell (target [:minion] (return-target))
 }
 {
   :id 587
@@ -2527,8 +2527,8 @@
   :secret {
     ; todo: make sure this supplies target as the attacker
     :when-opponent-minion-attacks #(-> %
-      (return-to-hand)
-      (modify-card-cost (current-target %) (partial + 2)))
+      (return-target)
+      (give-target {:cost 2}))
   }
 }
 {
@@ -2954,5 +2954,758 @@
     :health 1
     :properties [:divine-shield]
   }
+}
+{
+  :id 279
+  :name "Scavenging Hyena"
+  :quality :common
+  :class :hunter
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :type :beast
+    :when-my-minion-destroyed #(if (:beast (current-target %))
+      (buff-self 2 1))
+  }
+}
+{
+  :id 327
+  :name "Sense Demons"
+  :quality :common
+  :class :warlock
+  :cost 3
+  :spell (target-random [2 :undrawn :demon]
+    (draw-target) (give-card "Worthless Imp"))
+}
+{
+  :id 550
+  :name "Shadowstep"
+  :quality :common
+  :class :rogue
+  :cost 0
+  :spell (target [:my :minion] #(-> %
+    (return-target)
+    (give-target {:cost -2})))
+}
+{
+  :id 159
+  :name "Shan'do's Lesson"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (summon-minion [181 181]) ; 181 = 2/2 Treant w/ Taunt
+}
+{
+  :id 24
+  :name "Shieldbearer"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 0
+    :health 4
+    :properties [:taunt]
+  }
+}
+{
+  :id 544
+  :name "Silence"
+  :quality :common
+  :class :priest
+  :cost 0
+  :spell (target [:minion] (silence-target))
+}
+{
+  :id 648
+  :name "Silver Hand Knight"
+  :quality :common
+  :cost 5
+  :minion {
+    :attack 4
+    :health 4
+    :battlecry (summon-minion "Squire")
+  }
+}
+{
+  :id 634
+  :name "Silvermoon Guardian"
+  :quality :common
+  :cost 4
+  :minion {
+    :attack 3
+    :health 3
+    :properties [:divine-shield]
+  }
+}
+{
+  :id 255
+  :name "Skeleton"
+  :quality :common
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+  }
+}
+{
+  :id 215
+  :name "Slam"
+  :quality :common
+  :class :warrior
+  :cost 2
+  :spell (target [:minion] #(-> %
+    (damage-target 2)
+    (if (not (is-dead (current-target %)))
+      (draw-cards 1)))
+}
+{
+  :id 512
+  :name "Snake"
+  :quality :common
+  :class :hunter
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+  }
+}
+{
+  :id 553
+  :name "Snipe"
+  :quality :common
+  :class :hunter
+  :cost 2
+  :secret {
+    :when-opponent-minion-summoned (damage-target 4)
+  }
+}
+{
+  :id 4
+  :name "Sorcerer's Apprentice"
+  :quality :common
+  :class :mage
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :aura (spells-cost dec)
+  }
+}
+{
+  :id 311
+  :name "Soul of the Forest"
+  :quality :common
+  :class :druid
+  :cost 4
+  :spell (target-all [:my :minion]
+    (give-target {
+      :deathrattle (summon-minion 272)})) ; 272 = 2/2 Treant
+}
+{
+  :id 103
+  :name "Southsea Deckhand"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :type :pirate
+    ; todo: as above
+    :aura {:filter :self :charge :weapon-equipped}
+  }
+}
+{
+  :id 42
+  :name "Spellbreaker"
+  :quality :common
+  :cost 4
+  :minion {
+    :attack 4
+    :health 3
+    :battlecry (target [:minion] (silence-target))
+  }
+}
+{
+  :id 627
+  :name "Spiteful Smith"
+  :quality :common
+  :class :warrior
+  :cost 5
+  :minion {
+    :attack 4
+    :health 6
+    :enrage (target [:my :hero] (give-target {:weapon-bonus-attack 2}))
+  }
+}
+{
+  :id 21
+  :name "Squire"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 2
+    :health 2
+  }
+}
+{
+  :id 469
+  :name "Squirrel"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+  }
+}
+{
+  :id 653
+  :name "Starfall"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target-all [:opponent :minion] (damage-target 2))
+}
+{
+  :id 195
+  :name "Starfall"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target [:minion] (damage-target 5))
+}
+{
+  :id 152
+  :name "Stormforged Axe"
+  :quality :common
+  :class :shaman
+  :cost 2
+  :overload 1
+  :weapon {
+    :attack 2
+    :durability 3
+  }
+}
+{
+  :id 338
+  :name "Stranglethorn Tiger"
+  :quality :common
+  :cost 5
+  :minion {
+    :attack 5
+    :health 5
+    :type :beast
+    :properties [:stealth]
+  }
+}
+{
+  :id 219
+  :name "Summon a Panther"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (summon-minion "Panther")
+}
+{
+  :id 566
+  :name "Summoning Portal"
+  :quality :common
+  :class :warlock
+  :cost 4
+  :minion {
+    :attack 0
+    :health 4
+    :aura {:filter [:drawn :minion] :minimum-cost 1 :cost (partial + -2)}
+  }
+}
+{
+  :id 477
+  :name "Tauren Warrior"
+  :quality :common
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :properties [:taunt]
+    :enrage (buff-self 3 0)
+  }
+}
+{
+  :id 232
+  :name "Temple Enforcer"
+  :quality :common
+  :class :priest
+  :cost 6
+  :minion {
+    :attack 6
+    :health 6
+    :battlecry (target [:my :minion] (buff-target 0 3))
+  }
+}
+{
+  :id 62
+  :name "Thoughtsteal"
+  :quality :common
+  :class :priest
+  :cost 3
+  :spell (target-random [2 :opponent :undrawn] #(-> %
+    (give-card (:id (current-target %)))))
+}
+{
+  :id 265
+  :name "Thrallmar Farseer"
+  :quality :common
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :properties [:windfury]
+  }
+}
+{
+  :id 272
+  :name "Treant"
+  :quality :common
+  :class :druid
+  :cost 1
+  :minion {
+    :attack 2
+    :health 2
+  }
+}
+{
+  :id 337
+  :name "Treant"
+  :quality :common
+  :class :druid
+  :cost 1
+  :minion {
+    :attack 2
+    :health 2
+    :properties [:charge]
+    :end-of-turn (destroy-self)
+  }
+}
+{
+  :id 181
+  :name "Treant"
+  :quality :common
+  :class :druid
+  :cost 1
+  :minion {
+    :attack 2
+    :health 2
+    :properties [:taunt]
+  }
+}
+{
+  :id 51
+  :name "Unbound Elemental"
+  :quality :common
+  :class :shaman
+  :cost 3
+  :minion {
+    :attack 2
+    :health 4
+    :when-my-card-played #(if (> (or 0 (:overload (current-target %))) 0)
+      (-> % (buff-self 1 1)))
+  }
+}
+{
+  :id 317
+  :name "Unleash the Hounds"
+  :quality :common
+  :class :hunter
+  :cost 4
+  :spell (target-all [:opponent :minion] (summon-minion "Hound"))
+}
+{
+  :id 262
+  :name "Uproot"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target [:self] (buff-target 5 0))
+}
+{
+  :id 509
+  :name "Venture Co. Mercenary"
+  :quality :common
+  :cost 5
+  :minion {
+    :attack 7
+    :health 6
+    :aura (minions-cost #(+ % 3))
+  }
+}
+{
+  :id 63
+  :name "Violet Apprentice"
+  :quality :common
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 527
+  :name "Whelp"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :dragon
+  }
+}
+{
+  :id 675
+  :name "Windfury Harpy"
+  :quality :common
+  :cost 6
+  :minion {
+    :attack 4
+    :health 5
+    :properties [:windfury]
+  }
+}
+{
+  :id 273
+  :name "Wisp"
+  :quality :common
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 112
+  :name "Worgen Infiltrator"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :properties [:stealth]
+  }
+}
+{
+  :id 230
+  :name "Worthless Imp"
+  :quality :common
+  :class :warlock
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :demon
+  }
+}
+{
+  :id 633
+  :name "Wrath"
+  :quality :common
+  :class :druid
+  :cost 2
+  :spell (choose 234 501)
+}
+{
+  :id 234
+  :name "Wrath"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target [:minion] (damage-target 3))
+}
+{
+  :id 501
+  :name "Wrath"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target [:minion] #(-> % (damage-target 1) (draw-cards 1)))
+}
+{
+  :id 629
+  :name "Young Dragonhawk"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+    :properties [:windfury]
+  }
+}
+{
+  :id 247
+  :name "Youthful Brewmaster"
+  :quality :common
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :battlecry (target [:my :minion] (return-target))
+  }
+}
+{
+  :id 235
+  :name "Ysera Awakens"
+  :quality :common
+  :cost 2
+  :spell (target-all [#(not= (:name %) "Ysera")]
+    (damage-target 5))
+}
+{
+  :id 74
+  :name "Acidic Swamp Ooze"
+  :quality :free
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :battlecry (target [:opponent :weapon] (destroy-target))
+  }
+}
+{
+  :id 578
+  :name "Animal Companion"
+  :quality :free
+  :class :hunter
+  :cost 3
+  :spell #(-> % (summon-minion (rand-nth ["Misha" "Leokk" "Huffer"])))
+}
+{
+  :id 182
+  :name "Arcanite Reaper"
+  :quality :free
+  :class :warrior
+  :cost 5
+  :weapon {
+    :attack 5
+    :durability 2
+  }
+}
+{
+  :id 545
+  :name "Archmage"
+  :quality :free
+  :cost 6
+  :minion {
+    :attack 4
+    :health 7
+    :spell-damage 1
+  }
+}
+{
+  :id 433
+  :name "Assassin's Blade"
+  :quality :free
+  :class :rogue
+  :cost 5
+  :weapon {
+    :attack 3
+    :durability 4
+  }
+}
+{
+  :id 156
+  :name "Bananas"
+  :quality :free
+  :collectible false
+  :cost 1
+  :spell (target [:my :minion] (buff-target 1 1))
+}
+{
+  :id 376
+  :name "Barrel"
+  :quality :free
+  :collectible false
+  :cost 0
+  :minion {
+    :attack 0
+    :health 2
+    ; :deathrattle This card isn't used any more? Part of King Mukla tutorial.
+  }
+}
+{
+  :id 606
+  :name "Barrel Toss"
+  :quality :free
+  :collectible false
+  :cost 1
+  :spell (target [:character] (damage-target 2))
+}
+{
+  :id 29
+  :name "Blessing of Kings"
+  :quality :free
+  :class :paladin
+  :cost 4
+  :spell (target [:minion] (buff-target 4 4))
+}
+{
+  :id 256
+  :name "Bloodlust"
+  :quality :free
+  :class :shaman
+  :cost 5
+  :spell (target-all [:my :minion] (give-target {:attack-this-turn 3}))
+}
+{
+  :id 289
+  :name "Bluegill Warrior"
+  :quality :free
+  :cost 2
+  :minion {
+    :attack 2
+    :health 1
+    :type :murloc
+    :properties [:charge]
+  }
+}
+{
+  :id 65
+  :name "Boar"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+  }
+}
+{
+  :id 27
+  :name "Booty Bay Bodyguard"
+  :quality :free
+  :cost 5
+  :minion {
+    :attack 5
+    :health 4
+    :properties [:taunt]
+  }
+}
+{
+  :id 397
+  :name "Brewmaster"
+  ; todo: add collectible false to all uncollectibles (or collectible true?)
+  :quality :free
+  :cost 4
+  :minion {
+    :attack 4
+    :health 4
+  }
+}
+{
+  :id 31
+  :name "Chillwind Yeti"
+  :quality :free
+  :cost 4
+  :minion {
+    :attack 4
+    :health 5
+  }
+}
+{
+  :id 81
+  :name "Cleave"
+  :quality :free
+  :class :warrior
+  :cost 2
+  ; todo: determine how to apply spell damage effects
+  :spell (target-random [2 :opponent :minion] (damage-target 2))
+}
+{
+  :id 260
+  :name "Consecration"
+  :quality :free
+  :class :paladin
+  :cost 4
+  :spell (target-all [:opponent] (damage-target 2))
+}
+{
+  :id 173
+  :name "Core Hound"
+  :quality :free
+  :cost 7
+  :minion {
+    :attack 9
+    :health 5
+    :type :beast
+  }
+}
+{
+  :id 252
+  :name "Corruption"
+  :quality :free
+  :class :warlock
+  :cost 1
+  :spell (target [:opponent :minion] (give-target
+    {:start-of-my-turn (destroy-self)}))
+}
+{
+  :id 377
+  :name "Crazed Hunter"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 393
+  :name "Crazy Monkey"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :battlecry (give-opponent-card "Bananas")
+  }
+}
+{
+  :id 388
+  :name "Dalaran Mage"
+  :quality :free
+  :cost 3
+  :minion {
+    :attack 1
+    :health 4
+    :spell-damage 1
+  }
+}
+{
+  :id 84
+  :name "Darkscale Healer"
+  :quality :free
+  :cost 4
+  :minion {
+    :attack 4
+    :health 5
+    :battlecry (target-all [:my :character] (restore-health 2))
+  }
+}
+{
+  :id 554
+  :name "Divine Spirit"
+  :quality :free
+  :class :priest
+  :cost 2
+  :spell (target [:minion] #(let [
+    target (current-target %)
+    health (:health target)
+    max-health (:max-health target)
+    doubled-health (* 2 health)
+    ; we can't be healed above our new health, but we can be healed to our
+    ; previous maximum health.
+    new-max-health (max max-health doubled-health)
+    ] (set-target {
+      :max-health new-max-health
+      :health doubled-health})))
 }
 ])
