@@ -538,6 +538,7 @@
       "Emerald Drake" "Laughing Sister" "Nightmare" "Ysera Awakens"])) %)
   }
 }
+; Epics
 {
   :id 180
   :name "Adrenaline Rush"
@@ -987,6 +988,7 @@
   :class :warlock
   :spell (destroy-minions)
 }
+; Rares
 {
   :id 597
   :name "Abomination"
@@ -1054,7 +1056,7 @@
   :minion {
     :attack 4
     :health 5
-    :cant-attack
+    :properties [:cant-attack]
   }
 }
 {
@@ -1522,7 +1524,5 @@
   :overload 2
   :spell (target [:character] (damage-target 5))
 }
-; Epics
-; Rares
 ; Commons
 ])
