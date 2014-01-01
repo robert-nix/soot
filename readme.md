@@ -60,9 +60,8 @@ one.
 
 ### choose one
 
-- `(choose expr & more)`; requires input to choose between possible effects.
-each expr is a possible effect and is called with the game state as the sole
-argument
+- `(choose one two)`; requires input to choose between two possible spells.
+spells can be numbers or strings referring to ids or names of the spell to cast
 
 ### combo
 

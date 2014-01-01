@@ -167,9 +167,9 @@
   :minion {
     :attack 5
     :health 8
-    :battlecry (choose
-      (target-all [:my :minion] (buff-target 2 2))
-      (summon-minion [181 181])) ; 181 = Taunt Treant
+    :battlecry (choose "Demigod's Favor" "Shando's Lesson")
+      ; (target-all [:my :minion] (buff-target 2 2))
+      ; (summon-minion [181 181])) ; 181 = Taunt Treant
   }
 }
 {
@@ -556,7 +556,7 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose (draw-cards 2) (heal-hero 5))
+    :battlecry (choose "Ancient Teachings" "Ancient Secrets")
   }
 }
 {
@@ -568,9 +568,9 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose
-      (target :self #(-> % (give-target :taunt) (buff-target 0 5)))
-      (buff-self 5 0))
+    :battlecry (choose "Rooted" "Uproot")
+      ; (target :self #(-> % (give-target :taunt) (buff-target 0 5)))
+      ; (buff-self 5 0))
   }
 }
 {
@@ -1491,9 +1491,9 @@
   :minion {
     :attack 2
     :health 4
-    :battlecry (choose
-      (target [:character] (damage-target 2))
-      (target [:minion] (silence-target)))
+    :battlecry (choose "Moonfire" "Dispel")
+      ; (target [:character] (damage-target 2))
+      ; (target [:minion] (silence-target)))
   }
 }
 {
@@ -1682,9 +1682,9 @@
   :quality :rare
   :class :druid
   :cost 5
-  :spell (choose
-    (target [:my :hero] (give-target {:mana-crystal 2}))
-    (draw-cards 3))
+  :spell (choose 485 58)
+    ; (target [:my :hero] (give-target {:mana-crystal 2}))
+    ; (draw-cards 3))
 }
 {
   :id 82
@@ -1839,9 +1839,9 @@
   :quality :rare
   :class :druid
   :cost 5
-  :spell (choose
-    (target [:minion] (damage-target 5))
-    (target-all [:opponent :minion] (damage-target 2)))
+  :spell (choose 195 653)
+    ; (target [:minion] (damage-target 5))
+    ; (target-all [:opponent :minion] (damage-target 2)))
 }
 {
   :id 372
@@ -1949,4 +1949,102 @@
   }
 }
 ; Commons
+{
+  :id 577
+  :name "Abusive Sergeant"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :battlecry (target [:my :minion]
+      (give-target {:attack-this-turn 2}))
+  }
+}
+{
+  :id 428
+  :name "Acolyte of Pain"
+  :quality :common
+  :cost 3
+  :minion {
+    :attack 1
+    :health 3
+    :when-self-damaged (draw-cards 1)
+  }
+}
+{
+  :id 641
+  :name "Amani Berserker"
+  :quality :common
+  :cost 2
+  :minion {
+    :attack 2
+    :health 3
+    :enrage (buff-self 3 0)
+  }
+}
+{
+  :id 572
+  :name "Ancient Brewmaster"
+  :quality :common
+  :cost 4
+  :minion {
+    :attack 5
+    :health 4
+    :battlecry (target [:my :minion]
+      (return-to-hand))
+  }
+}
+{
+  :id 243
+  :name "Ancient Secrets"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (target [:character] (restore-health 5))
+}
+{
+  :id 517
+  :name "Ancient Teachings"
+  :quality :common
+  :class :druid
+  :cost 0
+  :spell (draw-cards 2)
+}
+{
+  :id 504
+  :name "Arathi Weaponsmith"
+  :quality :common
+  :class :warrior
+  :cost 4
+  :minion {
+    :attack 3
+    :health 3
+    :battlecry (equip-weapon "Battle Axe")
+  }
+}
+{
+  :id 191
+  :name "Argent Protector"
+  :quality :common
+  :class :paladin
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :battlecry (target [:my :minion] ; todo: figure out {:not :self} stuff
+      (give-target :divine-shield))
+  }
+}
+{
+  :id 473
+  :name "Argent Squire"
+  :quality :common
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :properties [:divine-shield]
+  }
+}
 ])
