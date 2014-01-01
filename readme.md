@@ -36,6 +36,8 @@ card states:
 tempted to remove `-target` from loads of function names, need to double check
 "normativity" of that though
 
+might replace 'opponent' with 'enemy'
+
 ## function notes
 
 ### targeting
@@ -45,9 +47,10 @@ functions.  functions are applied with the contextual target as the sole
 argument and should return a boolean (true include/false exclude).  colls are
 combined using logical and unless an :or keyword is present in the coll.  when
 filtering cards, cards are filtered for :state :played unless a :state keyword
-is provided.  expr functions are applied with the state as the sole argument,
-and this state contains the target as a part of its context.  often for target,
-colls are used for single keywords just cause it looks nicer.
+is provided.  this behavior belongs to filter-all.  expr functions are applied
+with the state as the sole argument, and this state contains the target as a
+part of its context.  often for target, colls are used for single keywords just
+cause it looks nicer.
 - `(target-random)`; while (target ...) will require input from the user if more
 than one viable target is found, (target-random ...) will choose randomly from
 viable targets.  if a number is supplied to the filter coll for target-random,

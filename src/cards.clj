@@ -475,7 +475,7 @@
   :minion {
     :attack 5
     :health 5
-    :deathrattle (mind-control-random)
+    :deathrattle (target-random [:opponent :minion] (mind-control-target))
   }
 }
 {
@@ -838,7 +838,7 @@
     :attack 3
     :health 3
     :type :murloc
-    :aura {:filter :murloc :attack #(+ 2 %) :health #(+ 1 %)}
+    :aura {:filter :murloc :attack #(+ 2 %) :health inc}
   }
 }
 {
@@ -872,6 +872,9 @@
   :quality :epic
   :class :rogue
   :cost 0
+  ; how do I plan for this to work?  these get their own modifiers for each
+  ; time-dependent function (once-this-turn next-turn aura ...) on the state
+  ; object and are managed/handled appropriately?  seems needlessly complex...
   :spell (once-this-turn (spells-cost #(- % 3)))
 }
 {
@@ -1376,6 +1379,7 @@
   :cost 1
   :spell #(-> %
     (target-all :minion (set-target {:stealth false}))
+    ; note: this destroys counterspell before it triggers
     (target-all [:opponent :secret] (destroy-target))
     (draw-cards 1))
 }
@@ -1523,6 +1527,426 @@
   :cost 3
   :overload 2
   :spell (target [:character] (damage-target 5))
+}
+{
+  :id 676
+  :name "Lightning Storm"
+  :quality :rare
+  :class :shaman
+  :cost 3
+  :overload 2
+  :spell (target-all [:opponent :minion]
+    #((damage-target (rand-nth [2 3])) %))
+}
+{
+  :id 436
+  :name "Lightwarden"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :when-character-healed (buff-self 2 0)
+  }
+}
+{
+  :id 117
+  :name "Lightwell"
+  :quality :rare
+  :class :priest
+  :cost 2
+  :minion {
+    :attack 0
+    :health 5
+    :start-of-my-turn (target-random [:my :damaged]
+      (restore-health 3))
+  }
+}
+{
+  :id 67
+  :name "Mana Addict"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 1
+    :health 3
+    :when-my-spell-cast (target [:self] (give-target {:attack-this-turn 2}))
+  }
+}
+{
+  :id 613
+  :name "Mana Tide Totem"
+  :quality :rare
+  :class :shaman
+  :cost 3
+  :minion {
+    :attack 0
+    :health 3
+    :type :totem
+    :end-of-my-turn (draw-cards 1)
+  }
+}
+{
+  :id 197
+  :name "Mana Wraith"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :aura (minions-cost inc)
+  }
+}
+{
+  :id 249
+  :name "Mass Dispel"
+  :quality :rare
+  :class :priest
+  :cost 4
+  :spell (target-all [:opponent :minion] (silence-target))
+}
+{
+  :id 127
+  :name "Master of Disguise"
+  :quality :rare
+  :class :rogue
+  :cost 4
+  :minion {
+    :attack 4
+    :health 4
+    :battlecry (target [:my :minion] (give-target :stealth))
+  }
+}
+{
+  :id 584
+  :name "Master Swordsmith"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 1
+    :health 3
+    :end-of-my-turn (target-random [:my :minion {:not :self}]
+      (buff-target 1 0))
+  }
+}
+{
+  :id 368
+  :name "Mind Control Tech"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+    :battlecry #(if (>= (count (filter-all [:opponent :minion])) 4)
+      (target-random [:opponent :minion] (mind-control-target)))
+  }
+}
+{
+  :id 447
+  :name "Misdirection"
+  :quality :rare
+  :class :hunter
+  :cost 2
+  :secret {
+    :when-hero-attacked (target-random [:character {:not :attacker}]
+      (redirect-attack-target))
+  }
+}
+{
+  :id 345
+  :name "Mortal Strike"
+  :quality :rare
+  :class :warrior
+  :cost 4
+  :spell #(if (<= (hero-health %) 12)
+    (target [:character] (damage-target 6))
+    (target [:character] (damage-target 4)))
+}
+{
+  :id 420
+  :name "Murloc Tidecaller"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :type :murloc
+    :when-minion-summoned #(if
+      (= (:type (last-minion-summoned %)) :murloc)
+      ((buff-self 1 0) %))
+  }
+}
+{
+  :id 120
+  :name "Nourish"
+  :quality :rare
+  :class :druid
+  :cost 5
+  :spell (choose
+    (target [:my :hero] (give-target {:mana-crystal 2}))
+    (draw-cards 3))
+}
+{
+  :id 82
+  :name "Perdition's Blade"
+  :quality :rare
+  :class :rogue
+  :cost 3
+  :weapon {
+    :attack 2
+    :durability 2
+    :battlecry (combo
+      (target [:character] (damage-target 1))
+      (target [:character] (damage-target 2)))
+  }
+}
+{
+  :id 54
+  :name "Pint-Sized Summoner"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :aura (once-each-turn (minions-cost #(- % 2)))
+  }
+}
+{
+  :id 157
+  :name "Questing Adventurer"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 2
+    :health 2
+    :when-my-card-played (buff-self 1 1)
+  }
+}
+{
+  :id 518
+  :name "Ravenholdt Assassin"
+  :quality :rare
+  :cost 7
+  :minion {
+    :attack 7
+    :health 5
+    :properties [:stealth]
+  }
+}
+{
+  :id 148
+  :name "Savagery"
+  :quality :rare
+  :class :druid
+  :cost 1
+  :spell (target [:character]
+    #((damage-target (hero-attack %)) %))
+}
+{
+  :id 8
+  :name "Savannah Highmane"
+  :quality :rare
+  :class :hunter
+  :cost 6
+  :minion {
+    :attack 6
+    :health 5
+    :type :beast
+    :deathrattle (summon-minion (repeat 2 "Hyena"))
+  }
+}
+{
+  :id 483
+  :name "Secretkeeper"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :when-secret-played (buff-self 1 1)
+  }
+}
+{
+  :id 442
+  :name "Shadow Madness"
+  :quality :rare
+  :class :priest
+  :cost 4
+  :spell (target [:opponent :minion #(<= (:attack %) 3)]
+    (mind-control-target))
+}
+{
+  :id 673
+  :name "Shadowflame"
+  :quality :rare
+  :class :warlock
+  :cost 4
+  :spell (target [:my :minion] #(-> %
+    (target-all [:opponent :minion]
+      (damage-target (:attack (current-target %))))
+    (destroy-target)))
+}
+{
+  :id 286
+  :name "SI:7 Agent"
+  :quality :rare
+  :class :rogue
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+    :combo (target [:character] (damage-target 2))
+  }
+}
+{
+  :id 573
+  :name "Siphon Soul"
+  :quality :rare
+  :class :warlock
+  :cost 6
+  :spell (target [:minion] #(-> %
+    (destroy-target)
+    (target [:my :hero] (restore-health 3))))
+}
+{
+  :id 451
+  :name "Spirit Wolf"
+  :quality :rare
+  :class :shaman
+  :cost 2
+  :minion {
+    :attack 2
+    :health 3
+    :properties [:taunt]
+  }
+}
+{
+  :id 389
+  :name "Stampeding Kodo"
+  :quality :rare
+  :cost 5
+  :minion {
+    :attack 3
+    :health 5
+    :type :beast
+    :battlecry (target-random [:opponent :minion #(<= (:attack %) 2)]
+      (destroy-target))
+  }
+}
+{
+  :id 464
+  :name "Starfall"
+  :quality :rare
+  :class :druid
+  :cost 5
+  :spell (choose
+    (target [:minion] (damage-target 5))
+    (target-all [:opponent :minion] (damage-target 2)))
+}
+{
+  :id 372
+  :name "Sunfury Protector"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 2
+    :health 3
+    :battlecry (target-all [:adjacent] (give-target :taunt))
+  }
+}
+{
+  :id 221
+  :name "Sunwalker"
+  :quality :rare
+  :cost 6
+  :minion {
+    :attack 4
+    :health 5
+    :properties [:taunt :divine-shield]
+  }
+}
+{
+  :id 360
+  :name "Twilight Drake"
+  :quality :rare
+  :cost 4
+  :minion {
+    :attack 4
+    :health 1
+    :type :dragon
+    :battlecry #(buff-self 0 (count (filter-all [:my :drawn])))
+  }
+}
+{
+  :id 638
+  :name "Upgrade!"
+  :quality :rare
+  :class :warrior
+  :cost 1
+  :spell (target [:my :hero] #(if (:weapon (current-target %))
+    ((buff-weapon 1 1) %)
+    ((equip-weapon "Heavy Axe") %)))
+}
+{
+  :id 160
+  :name "Vaporize"
+  :quality :rare
+  :class :mage
+  :cost 3
+  :secret {
+    :when-hero-attacked (target [:attacker] #(if (:minion (current-target %))
+      (destroy-target)))
+  }
+}
+{
+  :id 523
+  :name "Violet Teacher"
+  :quality :rare
+  :cost 4
+  :minion {
+    :attack 3
+    :health 5
+    :when-my-spell-cast (summon-minion "Violet Apprentice")
+  }
+}
+{
+  :id 119
+  :name "Void Terror"
+  :quality :rare
+  :class :warlock
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+    :type :demon
+    :battlecry (target-all [:adjacent] #(let [
+      attack (:attack (current-target %))
+      health (:health (current-target %))
+      ] (-> % (buff-self attack health) (destroy-target))))
+  }
+}
+{
+  :id 25
+  :name "Wild Pyromancer"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :when-my-spell-cast (target-all [:minion] (damage-target 1))
+  }
+}
+{
+  :id 123
+  :name "Young Priestess"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :end-of-my-turn (target-random [:my :minion {:not :self}]
+      (buff-target 0 1))
+  }
 }
 ; Commons
 ])
