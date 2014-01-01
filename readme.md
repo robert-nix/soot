@@ -38,6 +38,9 @@ tempted to remove `-target` from loads of function names, need to double check
 
 might replace 'opponent' with 'enemy'
 
+lots of todos in cards:  saving them for when I have a complete picture of the
+structure of the game state
+
 ## function notes
 
 ### targeting
