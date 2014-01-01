@@ -18,6 +18,8 @@ words in fn names:
 the minion for which an action is being performed
 - opponent: the opposite of 'my'
 
+functions:
+
 - game state is always first arg
 - functions that don't return a game state are normally called directly, whereas
 functions that do return a game state are generally partially applied
