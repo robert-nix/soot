@@ -21,7 +21,7 @@ the minion for which an action is being performed
 - game state is always first arg
 - functions that don't return a game state are normally called directly, whereas
 functions that do return a game state are generally partially applied
-filters are common
+- filters are common
 - values/functions interchangeable (call the function against the current game
 state to get the current value)
 
