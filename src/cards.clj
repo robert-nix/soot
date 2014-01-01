@@ -45,14 +45,14 @@
 {
   :id 716
   :name "Rogues Do It..."
-  :spell (-> % (deal-damage 4) (draw-cards 1))
+  :spell (target [:character] (-> % (damage-target 4) (draw-cards 1)))
 }
 ; The Coin
 {
   :id 141
   :name "The Coin"
   :cost 0
-  :spell (add-temporary-mana 1)
+  :spell (target [:my :hero] (give-target {:mana 1}))
 }
 ; Legendaries
 {
@@ -167,7 +167,9 @@
   :minion {
     :attack 5
     :health 8
-    :battlecry (choose (buff-minions 2 2) (summon-minion [181 181])) ; 181 = Taunt Treant
+    :battlecry (choose
+      (target-all [:my :minion] (buff-target 2 2))
+      (summon-minion [181 181])) ; 181 = Taunt Treant
   }
 }
 {
@@ -179,7 +181,7 @@
     :attack 12
     :health 12
     :type :dragon
-    :battlecry (comp (destroy-minions) (discard :all))
+    :battlecry (comp (destroy-minions) (target-all [:drawn] :all))
   }
 }
 {
@@ -434,6 +436,9 @@
     :attack 8
     :health 8
     :type :dragon
+    ; hard to tell if this is a bug but in the current beta build, ony's summons
+    ; are now all to the right (as is normal with summoned minions) instead of
+    ; alternating right/left
     :battlecry (summon-minion (repeat 6 527)) ; 527 = 1/1 Whelp
   }
 }
@@ -459,7 +464,7 @@
     :attack 8
     :health 8
     :properties [:cant-attack]
-    :end-of-my-turn (damage-random-enemy 8)
+    :end-of-my-turn (target-random :opponent (damage-target 8))
   }
 }
 {
@@ -563,7 +568,8 @@
     :attack 5
     :health 5
     :battlecry (choose
-      #(-> % (give-self-taunt) (buff-self 0 5)) (buff-self 5 0))
+      (target :self #(-> % (give-target :taunt) (buff-target 0 5)))
+      (buff-self 5 0))
   }
 }
 {
@@ -572,7 +578,7 @@
   :quality :epic
   :class :paladin
   :cost 6
-  :spell (apply comp (repeat 8 (target-random :opponent (deal-damage 1))))
+  :spell (apply comp (repeat 8 (target-random :opponent (damage-target 1))))
 }
 {
   :id 670
@@ -581,10 +587,11 @@
   :class :warlock
   :cost 5
   :spell #(-> %
-    (deal-damage 2)
-    (summon-minion-if #(is-dead % (last-targeted-character %))
-      (rand-nth ["Blood Imp" "Voidwalker" "Flame Imp"
-      "Dread Infernal" "Succubus" "Felguard"])))
+    (target [:character]
+      (damage-target 2)
+      #(if (is-dead (current-target %))
+        ((summon-minion (rand-nth ["Blood Imp" "Voidwalker" "Flame Imp"
+        "Dread Infernal" "Succubus" "Felguard"])) %)))
 }
 {
   :id 304
@@ -872,7 +879,7 @@
   :quality :epic
   :class :mage
   :cost 8
-  :spell (target :character (damage-target 10))
+  :spell (target [:character] (damage-target 10))
 }
 {
   :id 614
@@ -943,7 +950,7 @@
   :class :mage
   :cost 3
   :secret {
-    :when-enemy-spell-cast #(if
+    :when-opponent-spell-cast #(if
       (and (:minion (current-target %)) (is-friendly (current-target %)))
       (-> %
         (summon-minion 645) ; 645 = 1/3 Spellbender
@@ -992,7 +999,7 @@
     :deathrattle (damage-all 2)
   }
 }
-{
+{ ; todo: be certain swap-with-target works essentially like brewmaster + summon
   :id 425
   :name "Alarm-o-Bot"
   :quality :rare
@@ -1004,6 +1011,516 @@
       ((target-random [:drawn :minion]
         (swap-with-target)) %))
   }
+}
+{
+  :id 23
+  :name "Aldor Peacekeeper"
+  :quality :rare
+  :class :paladin
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+    :battlecry (target [:opponent :minion]
+      (buff-target #(1) 0))
+  }
+}
+{
+  :id 526
+  :name "Ancestral Spirit"
+  :quality :rare
+  :class :shaman
+  :cost 2
+  :spell (target [:minion]
+    (give-target {:deathrattle #((summon-minion (self %)) %)}))
+}
+{
+  :id 176
+  :name "Ancient Mage"
+  :quality :rare
+  :cost 4
+  :minion {
+    :attack 2
+    :health 5
+    :battlecry (target-all :adjacent
+      (give-target {:spell-damage 1}))
+  }
+}
+{
+  :id 153
+  :name "Ancient Watcher"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 4
+    :health 5
+    :cant-attack
+  }
+}
+{
+  :id 57
+  :name "Angry Chicken"
+  :quality :rare
+  :cost 1
+  :minon {
+    :attack 1
+    :health 1
+    :type :beast
+    :enrage (buff-self 5 0)
+  }
+}
+{
+  :id 97
+  :name "Arcane Golem"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 4
+    :health 2
+    :properties [:charge]
+    :battlecry (target [:opponent :hero]
+      (give-target {:mana-crystal 1}))
+  }
+}
+{
+  :id 463
+  :name "Argent Commander"
+  :quality :rare
+  :cost 6
+  :minion {
+    :attack 4
+    :health 2
+    :properties [:charge :divine-shield]
+  }
+}
+{
+  :id 644
+  :name "Armorsmith"
+  :quality :rare
+  :class :warrior
+  :cost 2
+  :minion {
+    :attack 1
+    :health 4
+    :when-my-minion-damaged (target [:my :hero]
+      (give-target {:armor 1}))
+  }
+}
+{
+  :id 656
+  :name "Auchenai Soulpriest"
+  :quality :rare
+  :class :priest
+  :cost 4
+  :minion {
+    :attack 3
+    :health 5
+    ; handle this in restore-health, apply aura to everything as a signal
+    :aura :auchenai-soulpriest-aura
+  }
+}
+{
+  :id 280
+  :name "Azure Drake"
+  :quality :rare
+  :cost 5
+  :minion {
+    :attack 4
+    :health 4
+    :type :dragon
+    :spell-damage 1
+    :battlecry (draw-cards 1)
+  }
+}
+{
+  :id 266
+  :name "Bite"
+  :quality :rare
+  :class :druid
+  :cost 4
+  :spell (target [:my :hero] (give-target {:armor 4 :attack-this-turn 4}))
+}
+{
+  :id 244
+  :name "Blade Flurry"
+  :quality :rare
+  :class :rogue
+  :cost 2
+  :spell #(-> %
+    (destroy-my-weapon)
+    (damage-all (my-weapon-durability %)))
+}
+{
+  :id 7
+  :name "Blessed Champion"
+  :quality :rare
+  :class :paladin
+  :cost 5
+  :spell (target [:minion]
+    (give-target {:attack (partial * 2)}))
+}
+{
+  :id 276
+  :name "Blizzard"
+  :quality :rare
+  :class :mage
+  :cost 6
+  :spell (target-all [:opponent :minion]
+    #(-> %
+      (damage-target 2)
+      (give-target :freeze)))
+}
+{
+  :id 453
+  :name "Bloodsail Corsair"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :type :pirate
+    :battlecry (target [:opponent :hero] (give-target {:weapon-durability -1}))
+  }
+}
+{
+  :id 88
+  :name "Coldlight Oracle"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 2
+    :health 2
+    :type :murloc
+    :battlecry #(-> % (draw-cards 2) (draw-opponent-cards 2))
+  }
+}
+{
+  :id 424
+  :name "Coldlight Seer"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :type :murloc
+    :battlecry (target-all :murloc (buff-target 2 0))
+  }
+}
+{
+  :id 166
+  :name "Commanding Shout"
+  :quality :rare
+  :class :warrior
+  :cost 2
+  :spell #(-> %
+    (target-all [:my :minion] (give-target {:minimum-health 1}))
+    (draw-cards 1))
+}
+{
+  :id 531
+  :name "Counterspell"
+  :quality :rare
+  :class :mage
+  :cost 3
+  :secret {
+    :when-opponent-spell-cast (counter-spell)
+  }
+}
+{
+  :id 612
+  :name "Crazed Alchemist"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :battlecry (target [:minion] #(-> %
+      (set-target {:health (:attack %)})
+      (set-target {:attack (:health %)})))
+  }
+}
+{
+  :id 542
+  :name "Defender of Argus"
+  :quality :rare
+  :cost 4
+  :minion {
+    :attack 3
+    :health 3
+    :battlecry (target-all :adjacent
+      (give-target {:health 1 :attack 1 :taunt true}))
+  }
+}
+{
+  :id 212
+  :name "Demolisher"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 1
+    :health 4
+    :start-of-my-turn (target-random [:opponent]
+      (damage-target 2))
+  }
+}
+{
+  :id 581
+  :name "Divine Favor"
+  :quality :rare
+  :class :paladin
+  :cost 3
+  :spell #((draw-cards (-
+    (count (filter-all % [:opponent :drawn]))
+    (count (filter-all % [:my :drawn])))) %)
+}
+{
+  :id 507
+  :name "Doomguard"
+  :quality :rare
+  :class :warlock
+  :cost 5
+  :minion {
+    :attack 5
+    :health 7
+    :type :demon
+    :properties [:charge]
+    :battlecry (target-random [2 :my :drawn]
+      (destroy-target))
+  }
+}
+{
+  :id 363
+  :name "Eaglehorn Bow"
+  :quality :rare
+  :class :hunter
+  :cost 3
+  :weapon {
+    :attack 3
+    :durability 2
+    :when-secret-revealed (buff-self 0 1)
+  }
+}
+{
+  :id 625
+  :name "Emperor Cobra"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :type :beast
+    :properties [:poison]
+  }
+}
+{
+  :id 383
+  :name "Equality"
+  :quality :rare
+  :class :paladin
+  :cost 2
+  :spell (target-all :minion (set-target {:health 1}))
+}
+{
+  :id 125
+  :name "Ethereal Arcanist"
+  :quality :rare
+  :class :mage
+  :cost 4
+  :minion {
+    :attack 3
+    :health 3
+    :end-of-my-turn #(if
+      (> (count (filter-all % [:my :secret :played])) 0)
+      ((buff-self 2 2) %))
+  }
+}
+{
+  :id 114
+  :name "Explosive Shot"
+  :quality :rare
+  :class :hunter
+  :cost 5
+  :spell (comp
+    (target-all :adjacent-to-target (damage-target 2))
+    (target [:minion] (damage-target 5)))
+}
+{
+  :id 236
+  :name "Felguard"
+  :quality :rare
+  :class :warlock
+  :cost 3
+  :minion {
+    :attack 3
+    :health 5
+    :type :demon
+    :battlecry (target [:my :hero] (give-target {:mana-crystal -1}))
+  }
+}
+{
+  :id 214
+  :name "Feral Spirit"
+  :quality :rare
+  :class :shaman
+  :cost 3
+  :overload 2
+  :spell (summon-minion (repeat 2 "Spirit Wolf"))
+}
+{
+  :id 630
+  :name "Flare"
+  :quality :rare
+  :class :hunter
+  :cost 1
+  :spell #(-> %
+    (target-all :minion (set-target {:stealth false}))
+    (target-all [:opponent :secret] (destroy-target))
+    (draw-cards 1))
+}
+{
+  :id 69
+  :name "Frothing Berserker"
+  :quality :rare
+  :class :warrior
+  :cost 3
+  :minion {
+    :attack 2
+    :health 4
+    :when-minion-damaged (buff-self 1 0)
+  }
+}
+{
+  :id 131
+  :name "Gadgetzan Auctioneer"
+  :quality :rare
+  :cost 5
+  :minion {
+    :attack 4
+    :health 4
+    :when-my-spell-cast (draw-cards 1)
+  }
+}
+{
+  :id 135
+  :name "Headcrack"
+  :quality :rare
+  :class :rogue
+  :cost 3
+  :spell (target [:opponent :hero] (damage-target 2))
+  :combo (once-my-next-turn (give-card "Headcrack"))
+}
+{
+  :id 457
+  :name "Holy Fire"
+  :quality :rare
+  :class :priest
+  :cost 6
+  :spell #(-> %
+    (target [:character] (damage-target 5))
+    (target [:my :hero] (restore-health 5)))
+}
+{
+  :id 355
+  :name "Holy Wrath"
+  :quality :rare
+  :class :paladin
+  :cost 5
+  ; let this be known as the first time I've restored to let
+  :spell (target [:character] #(let [s ((draw-cards 1) %)]
+    (-> s (damage-target (:cost (last-card-drawn s))))))
+}
+{
+  :id 689
+  :name "Hyena"
+  :quality :rare
+  :class :hunter
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :type :beast
+  }
+}
+{
+  :id 321
+  :name "Imp"
+  :quality :rare
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :demon
+  }
+}
+{
+  :id 178
+  :name "Imp Master"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 1
+    :health 5
+    :end-of-my-turn #(-> %
+      (target [:self] (damage-target 1))
+      (summon-minion 321)) ; 321 = 1/1 Imp
+  }
+}
+{
+  :id 209
+  :name "Injured Blademaster"
+  :quality :rare
+  :cost 3
+  :minion {
+    :attack 4
+    :health 7
+    :battlecry (target [:self] (damage-target 4))
+  }
+}
+{
+  :id 459
+  :name "Keeper of the Grove"
+  :quality :rare
+  :class :druid
+  :cost 4
+  :minion {
+    :attack 2
+    :health 4
+    :battlecry (choose
+      (target [:character] (damage-target 2))
+      (target [:minion] (silence-target)))
+  }
+}
+{
+  :id 411
+  :name "Kirin Tor Mage"
+  :quality :rare
+  :class :mage
+  :cost 3
+  :minion {
+    :attack 4
+    :health 3
+    :battlecry (once-this-turn (secrets-cost 0))
+  }
+}
+{
+  :id 422
+  :name "Knife Juggler"
+  :quality :rare
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :when-my-minion-summoned (target-random [:opponent] (damage-target 1))
+  }
+}
+{
+  :id 679
+  :name "Lava Burst"
+  :quality :rare
+  :class :shaman
+  :cost 3
+  :overload 2
+  :spell (target [:character] (damage-target 5))
 }
 ; Epics
 ; Rares
