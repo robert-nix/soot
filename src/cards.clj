@@ -3704,8 +3704,8 @@
     ; we can't be healed above our new health, but we can be healed to our
     ; previous maximum health.
     new-max-health (max max-health doubled-health)
-    ] (set-target {
+    ] (-> % (set-target {
       :max-health new-max-health
-      :health doubled-health})))
+      :health doubled-health}))))
 }
 ])
