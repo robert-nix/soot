@@ -81,7 +81,7 @@
   :quality :free
   :set :basic
   :cost 2
-  :spell ;...
+  :spell #(println "Yes?")
 }
 {
   :id 717
@@ -2932,7 +2932,7 @@
   :set :expert
   :class :warrior
   :cost 0
-  :spell ;...
+  :spell (target [:minion] #(-> % (damage-target 1) (buff-target 2 0)))
 }
 {
   :id 500
@@ -5061,7 +5061,7 @@
   :quality :common
   :set :missions
   :cost 1
-  :spell #(println "Kill minions or something") ; Yeah, no.F
+  :spell #(println "Kill minions or something") ; Yeah, no.
 }
 {
   :id 293
