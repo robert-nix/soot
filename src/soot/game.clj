@@ -1,10 +1,12 @@
 ; game.clj - let's get to a debuggable point; set up a valid game and play it
 ; randomly.
 (ns soot.game
-  (:require [soot.cards :as cards]))
+  (:require [clojure.set :as set]))
+
+(load "cards")
 
 (def cards-by-id
-  (loop [v cards/cards by-id {}] (if (nil? v)
+  (loop [v cards by-id {}] (if (nil? v)
     by-id
     (let [head (first v)]
       (recur

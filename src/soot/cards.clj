@@ -1,7 +1,6 @@
-; as of 12/30/2013 via Hearthpwn's card db
-(ns soot.cards
-  (:require [clojure.set :as set]))
+(in-ns 'soot.game)
 
+; as of 01/02/2014 via Hearthpwn's card db
 (def cards [
 ; Misc
 {
@@ -132,7 +131,7 @@
     :attack 8
     :health 8
     :type :dragon
-    :battlecry (set-hero-health 15)
+    :battlecry (target [:hero] (set-target {:health 15}))
   }
 }
 {
@@ -604,8 +603,8 @@
   :minion {
     :attack 2
     :health 2
-    :battlecry (target :minion
-      #((polymorph-target (rand-nth ["Devilsaur" "Squirrel"])) %))
+    :battlecry (target [:minion]
+      #(-> % (polymorph-target (rand-nth ["Devilsaur" "Squirrel"]))))
   }
 }
 {
@@ -1412,9 +1411,14 @@
   :minion {
     :attack 2
     :health 2
-    :battlecry (target [:minion] #(-> %
-      (set-target {:health (:attack %)})
-      (set-target {:attack (:health %)})))
+    :battlecry (target [:minion] #(let [
+      attack (:attack (current-target %))
+      health (:health (current-target %))
+      ] (-> %
+      ; so... silence interaction.  I think this is right.  Silence doesn't
+      ; appear to rely very much on history.
+      (set-target {:health attack :max-health attack})
+      (set-target {:attack health}))))
   }
 }
 {
@@ -1797,7 +1801,7 @@
   :minion {
     :attack 2
     :health 2
-    :aura (minions-cost inc)
+    :aura {:filter :hero :minions-cost inc}
   }
 }
 {
@@ -1921,7 +1925,7 @@
   :minion {
     :attack 2
     :health 2
-    :aura (once-each-turn (minions-cost #(- % 2)))
+    :aura {:filter [:my :hero] :first-minion-costs dec}
   }
 }
 {
@@ -3712,7 +3716,7 @@
   :minion {
     :attack 7
     :health 6
-    :aura (minions-cost #(+ % 3))
+    :aura {:filter [:my :hero] :minions-cost #(+ % 3)}
   }
 }
 {
