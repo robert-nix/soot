@@ -1,5 +1,5 @@
 ; as of 12/30/2013 via Hearthpwn's card db
-(ns soot.db
+(ns soot.cards
   (:require [clojure.set :as set]))
 
 (def cards [
@@ -689,12 +689,11 @@
   :set :expert
   :class :warlock
   :cost 5
-  :spell #(-> %
-    (target []
-      (damage-target 2)
-      #(if (is-dead (current-target %))
-        ((summon-minion (rand-nth ["Blood Imp" "Voidwalker" "Flame Imp"
-        "Dread Infernal" "Succubus" "Felguard"])) %)))
+  :spell (target [] #(let [s (-> % (damage-target 2))]
+    (if (is-dead (current-target s))
+      (-> s (summon-minion (rand-nth ["Blood Imp" "Voidwalker" "Flame Imp"
+      "Dread Infernal" "Succubus" "Felguard"])))
+      s)))
 }
 {
   :id 304
@@ -854,7 +853,7 @@
   :weapon {
     :attack 5
     :durability 2
-    :immune ; todo, remember to interpret this tag for weapons
+    :properties [:immune] ; todo, remember to interpret this tag for weapons
   }
 }
 {
@@ -3408,7 +3407,7 @@
   :spell (target [:minion] #(-> %
     (damage-target 2)
     (if (not (is-dead (current-target %)))
-      (draw-cards 1)))
+      (draw-cards 1))))
 }
 {
   :id 512
