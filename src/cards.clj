@@ -1,12 +1,14 @@
 ; as of 12/30/2013 via Hearthpwn's card db
 (ns soot.db
-  (:require (clojure.set)))
+  (:require [clojure.set :as set]))
 
 (def cards [
 ; Misc
 {
   :id 552
   :name "Chicken"
+  :quality :free
+  :set :debug
   :cost 0
   :minion {
     :attack 1
@@ -17,18 +19,55 @@
 {
   :id 520
   :name "Excess Mana"
+  :quality :free
+  :set :basic
   :class :druid
   :cost 0
   :spell (draw-cards 1)
 }
 {
+  :id 349
+  :name "Flames of Azzinoth"
+  :quality :free
+  :set :missions
+  :cost 2
+  :hero-power (summon-minion [455 455])
+}
+{
   :id 714
   :name "I Am Murloc"
+  :quality :free
+  :set :reward
   :spell #((summon-minion (repeat (rand-nth [3 4 5]) 715)) %) ; 715 = 1/1 Murloc
+}
+{
+  :id 223
+  :name "Illidan Stormrage"
+  :quality :free
+  :set :missions
+  :class :hunter
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Flames of Azzinoth"
+  }
+}
+{
+  :id 655
+  :name "Lorewalker Cho"
+  :quality :free
+  :set :missions
+  :cost 0
+  :hero {
+    :max-health 25
+    :hero-power "Transcendence"
+  }
 }
 {
   :id 715
   :name "Murloc"
+  :quality :free
+  :set :reward
   :cost 1
   :minion {
     :attack 1
@@ -37,8 +76,18 @@
   }
 }
 {
+  :id 687
+  :name "NOOOOOOOOOOOO"
+  :quality :free
+  :set :basic
+  :cost 2
+  :spell ;...
+}
+{
   :id 717
   :name "Power of the Horde"
+  :quality :free
+  :set :reward
   :spell #((summon-minion (rand-nth ["Frostwolf Grunt" "Sen'jin Shieldmasta"
     "Cairne Bloodhoof" "Tauren Warrior" "Thrallmar Farseer"
     "Silvermoon Guardian"])) %)
@@ -46,12 +95,16 @@
 {
   :id 716
   :name "Rogues Do It..."
+  :quality :free
+  :set :reward
   :spell (target [] (-> % (damage-target 4) (draw-cards 1)))
 }
 ; The Coin
 {
   :id 141
   :name "The Coin"
+  :quality :free
+  :set :basic
   :cost 0
   :spell (target [:my :hero] (give-target {:mana 1}))
 }
@@ -60,6 +113,7 @@
   :id 335
   :name "Al'Akir the Windlord"
   :quality :legendary
+  :set :expert
   :class :shaman
   :cost 8
   :minion {
@@ -72,6 +126,7 @@
   :id 303
   :name "Alexstrasza"
   :quality :legendary
+  :set :expert
   :cost 9
   :minion {
     :attack 8
@@ -84,6 +139,7 @@
   :id 220
   :name "Archmage Antonidas"
   :quality :legendary
+  :set :expert
   :class :mage
   :cost 7
   :minion {
@@ -96,6 +152,7 @@
   :id 53
   :name "Ashbringer"
   :quality :legendary
+  :set :expert
   :class :paladin
   :cost 5
   :weapon {
@@ -107,6 +164,7 @@
   :id 359
   :name "Baine Bloodhoof"
   :quality :legendary
+  :set :expert
   :cost 4
   :minion {
     :attack 4
@@ -117,6 +175,7 @@
   :id 539
   :name "Baron Geddon"
   :quality :legendary
+  :set :expert
   :cost 7
   :minion {
     :attack 7
@@ -128,6 +187,7 @@
   :id 525
   :name "Bloodmage Thalnos"
   :quality :legendary
+  :set :expert
   :cost 2
   :minion {
     :attack 1
@@ -140,6 +200,7 @@
   :id 498
   :name "Cairne Bloodhoof"
   :quality :legendary
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -151,6 +212,7 @@
   :id 267
   :name "Captain Greenskin"
   :quality :legendary
+  :set :expert
   :cost 5
   :minion {
     :attack 5
@@ -163,6 +225,7 @@
   :id 605
   :name "Cenarius"
   :quality :legendary
+  :set :expert
   :class :druid
   :cost 9
   :minion {
@@ -177,6 +240,7 @@
   :id 474
   :name "Deathwing"
   :quality :legendary
+  :set :expert
   :cost 10
   :minion {
     :attack 12
@@ -191,6 +255,7 @@
   :id 3
   :name "Edwin VanCleef"
   :quality :legendary
+  :set :expert
   :class :rogue
   :cost 3
   :minion {
@@ -204,6 +269,7 @@
   :id 682
   :name "Elite Tauren Chieftan"
   :quality :legendary
+  :set :reward
   :cost 5
   :minion {
     :attack 5
@@ -216,6 +282,7 @@
   :id 541
   :name "Finkle Einhorn"
   :quality :legendary
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -226,6 +293,7 @@
   :id 251
   :name "Gelbin Mekkatorque"
   :quality :legendary
+  :set :reward
   :cost 6
   :minion {
     :attack 6
@@ -238,6 +306,7 @@
   :id 643
   :name "Grommash Hellscream"
   :quality :legendary
+  :set :expert
   :class :warrior
   :cost 8
   :minion {
@@ -251,6 +320,7 @@
   :id 18
   :name "Gruul"
   :quality :legendary
+  :set :expert
   :cost 8
   :minion {
     :attack 7
@@ -262,6 +332,7 @@
   :id 602
   :name "Harrison Jones"
   :quality :legendary
+  :set :expert
   :cost 5
   :minion {
     :attack 5
@@ -275,6 +346,7 @@
   :id 39
   :name "Hogger"
   :quality :legendary
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -286,18 +358,20 @@
   :id 203
   :name "Illidan Stormrage"
   :quality :legendary
+  :set :expert
   :cost 6
   :minion {
     :attack 7
     :health 5
     :type :demon
-    :when-my-card-played (summon-minion "Flame of Azzinoth")
+    :when-my-card-played (summon-minion 685) ; 685 = Flame of Azzinoth
   }
 }
 {
   :id 194
   :name "King Krush"
   :quality :legendary
+  :set :expert
   :class :hunter
   :cost 9
   :minion {
@@ -311,6 +385,7 @@
   :id 373
   :name "King Mukla"
   :quality :legendary
+  :set :expert
   :cost 3
   :minion {
     :attack 5
@@ -323,6 +398,7 @@
   :id 674
   :name "Leeroy Jenkins"
   :quality :legendary
+  :set :expert
   :cost 4
   :minion {
     :attack 6
@@ -335,6 +411,7 @@
   :id 482
   :name "Lord Jaraxxus"
   :quality :legendary
+  :set :expert
   :class :warlock
   :cost 9
   :minion {
@@ -354,17 +431,20 @@
 {
   :id 406
   :name "Lord Jaraxxus"
+  :quality :legendary
+  :set :expert
   :class :warlock
   :hero {
     :health 15
     :type :demon
-    :power "INFERNO!"
+    :hero-power "INFERNO!"
   }
 }
 {
   :id 456
   :name "Lorewalker Cho"
   :quality :legendary
+  :set :expert
   :cost 2
   :minion {
     :attack 0
@@ -376,6 +456,7 @@
   :id 241
   :name "Malygos"
   :quality :legendary
+  :set :expert
   :cost 9
   :minion {
     :attack 4
@@ -388,6 +469,7 @@
   :id 339
   :name "Millhouse Manastorm"
   :quality :legendary
+  :set :expert
   :cost 2
   :minion {
     :attack 4
@@ -399,6 +481,7 @@
   :id 19
   :name "Nat Pagle"
   :quality :legendary
+  :set :expert
   :cost 2
   :minion {
     :attack 0
@@ -410,6 +493,7 @@
   :id 285
   :name "Nozdormu"
   :quality :legendary
+  :set :expert
   :cost 9
   :minion {
     :attack 8
@@ -422,6 +506,7 @@
   :id 217
   :name "Old Murk-Eye"
   :quality :legendary
+  :set :reward
   :cost 4
   :minion {
     :attack #(+ 2 (count-minions % :murloc))
@@ -434,6 +519,7 @@
   :id 432
   :name "Onyxia"
   :quality :legendary
+  :set :expert
   :cost 9
   :minion {
     :attack 8
@@ -449,6 +535,7 @@
   :id 228
   :name "Prophet Velen"
   :quality :legendary
+  :set :expert
   :class :priest
   :cost 7
   :minion {
@@ -462,6 +549,7 @@
   :id 503
   :name "Ragnaros the Firelord"
   :quality :legendary
+  :set :expert
   :cost 8
   :minion {
     :attack 8
@@ -474,6 +562,7 @@
   :id 33
   :name "Sylvanas Windrunner"
   :quality :legendary
+  :set :expert
   :cost 5
   :minion {
     :attack 5
@@ -485,6 +574,7 @@
   :id 179
   :name "The Beast"
   :quality :legendary
+  :set :expert
   :cost 6
   :minion {
     :attack 9
@@ -497,6 +587,7 @@
   :id 396
   :name "The Black Knight"
   :quality :legendary
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -508,6 +599,7 @@
   :id 245
   :name "Tinkmaster Overspark"
   :quality :legendary
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -520,6 +612,7 @@
   :id 391
   :name "Tirion Fordring"
   :quality :legendary
+  :set :expert
   :class :paladin
   :cost 8
   :minion {
@@ -533,6 +626,7 @@
   :id 495
   :name "Ysera"
   :quality :legendary
+  :set :expert
   :cost 9
   :minion {
     :attack 4
@@ -546,6 +640,7 @@
   :id 180
   :name "Adrenaline Rush"
   :quality :epic
+  :set :expert
   :class :rogue
   :cost 1
   :spell (combo (draw-cards 1) (draw-cards 2))
@@ -554,6 +649,7 @@
   :id 34
   :name "Ancient of Lore"
   :quality :epic
+  :set :expert
   :class :druid
   :cost 7
   :minion {
@@ -566,6 +662,7 @@
   :id 242
   :name "Ancient of War"
   :quality :epic
+  :set :expert
   :class :druid
   :cost 7
   :minion {
@@ -580,6 +677,7 @@
   :id 142
   :name "Avenging Wrath"
   :quality :epic
+  :set :expert
   :class :paladin
   :cost 6
   :spell (apply comp (repeat 8 (target-random [:opponent] (damage-target 1))))
@@ -588,6 +686,7 @@
   :id 670
   :name "Bane of Doom"
   :quality :epic
+  :set :expert
   :class :warlock
   :cost 5
   :spell #(-> %
@@ -601,6 +700,7 @@
   :id 304
   :name "Bestial Wrath"
   :quality :epic
+  :set :expert
   :class :hunter
   :cost 1
   :spell (target :beast #(-> %
@@ -611,6 +711,7 @@
   :id 73
   :name "Big Game Hunter"
   :quality :epic
+  :set :expert
   :cost 3
   :minion {
     :attack 4
@@ -623,6 +724,7 @@
   :id 75
   :name "Blood Knight"
   :quality :epic
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -636,6 +738,7 @@
   :id 297
   :name "Brawl"
   :quality :epic
+  :set :expert
   :class :warrior
   :cost 5
   :spell #((apply comp (repeat (+ (count-minions %) -1)
@@ -645,6 +748,7 @@
   :id 147
   :name "Cabal Shadow Priest"
   :quality :epic
+  :set :expert
   :class :priest
   :cost 6
   :minion {
@@ -658,6 +762,7 @@
   :id 559
   :name "Captain's Parrot"
   :quality :epic
+  :set :reward
   :cost 2
   :minion {
     :attack 1
@@ -670,6 +775,7 @@
   :id 172
   :name "Doomhammer"
   :quality :epic
+  :set :expert
   :class :shaman
   :cost 5
   :overload 2
@@ -683,6 +789,7 @@
   :id 467
   :name "Doomsayer"
   :quality :epic
+  :set :expert
   :cost 2
   :minion {
     :attack 0
@@ -694,6 +801,7 @@
   :id 124
   :name "Earth Elemental"
   :quality :epic
+  :set :expert
   :class :shaman
   :cost 5
   :overload 3
@@ -707,6 +815,7 @@
   :id 450
   :name "Faceless Manipulator"
   :quality :epic
+  :set :expert
   :cost 5
   :minion {
     :attack 3
@@ -719,6 +828,7 @@
   :id 107
   :name "Far Sight"
   :quality :epic
+  :set :expert
   :class :shaman
   :cost 3
   :spell (target-random [:my :undrawn] #(-> %
@@ -729,6 +839,7 @@
   :id 237
   :name "Force of Nature"
   :quality :epic
+  :set :expert
   :class :druid
   :cost 6
   :spell (summon-minion (repeat 3 337))
@@ -737,6 +848,7 @@
   :id 278
   :name "Gladiator's Longbow"
   :quality :epic
+  :set :expert
   :class :hunter
   :cost 7
   :weapon {
@@ -749,6 +861,7 @@
   :id 96
   :name "Gorehowl"
   :quality :epic
+  :set :expert
   :class :warrior
   :cost 7
   :weapon {
@@ -761,6 +874,7 @@
   :id 660
   :name "Hungry Crab"
   :quality :epic
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -773,6 +887,7 @@
   :id 28
   :name "Ice Block"
   :quality :epic
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -786,6 +901,7 @@
   :id 562
   :name "Kidnapper"
   :quality :epic
+  :set :expert
   :class :rogue
   :cost 6
   :minion {
@@ -798,6 +914,7 @@
   :id 506
   :name "Lay on Hands"
   :quality :epic
+  :set :expert
   :class :paladin
   :cost 8
   :spell #(-> (heal-hero 8) (draw-cards 3))
@@ -806,6 +923,7 @@
   :id 301
   :name "Mindgames"
   :quality :epic
+  :set :expert
   :class :priest
   :cost 4
   :spell (target-random [1 :opponent :undrawn :minion]
@@ -816,6 +934,7 @@
   :id 94
   :name "Molten Giant"
   :quality :epic
+  :set :expert
   :cost #(+ 20 (- (hero-health %) (hero-max-health %)))
   :minion {
     :attack 8
@@ -826,6 +945,7 @@
   :id 264
   :name "Mountain Giant"
   :quality :epic
+  :set :expert
   :cost #(- 12 (cards-in-hand %))
   :minion {
     :attack 8
@@ -836,6 +956,7 @@
   :id 222
   :name "Murloc Warleader"
   :quality :epic
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -848,6 +969,7 @@
   :id 14
   :name "Patient Assassin"
   :quality :epic
+  :set :expert
   :class :rogue
   :cost 2
   :minion {
@@ -860,6 +982,7 @@
   :id 402
   :name "Pit Lord"
   :quality :epic
+  :set :expert
   :class :warlock
   :cost 4
   :minion {
@@ -870,9 +993,23 @@
   }
 }
 {
+  :id 102
+  :name "Placeholder Card"
+  :quality :epic
+  :set :none
+  :class :mage
+  :cost 9
+  :minion {
+    :attack 6
+    :health 8
+    :battlecry #(println "I am Placeholder Card!")
+  }
+}
+{
   :id 364
   :name "Preparation"
   :quality :epic
+  :set :expert
   :class :rogue
   :cost 0
   ; how do I plan for this to work?  these get their own modifiers for each
@@ -884,6 +1021,7 @@
   :id 496
   :name "Pyroblast"
   :quality :epic
+  :set :expert
   :class :mage
   :cost 8
   :spell (target [] (damage-target 10))
@@ -892,6 +1030,7 @@
   :id 614
   :name "Sea Giant"
   :quality :epic
+  :set :expert
   :cost (- 10 (count-minions))
   :minion {
     :attack 8
@@ -902,6 +1041,7 @@
   :id 582
   :name "Shadow of Nothing"
   :quality :epic
+  :set :expert
   :class :priest
   :cost 0
   :minion {
@@ -913,6 +1053,7 @@
   :id 421
   :name "Shadowform"
   :quality :epic
+  :set :expert
   :class :priest
   :cost 3
   :spell #(if (= (:name (hero-power %)) "Mind Spike")
@@ -923,6 +1064,7 @@
   :id 50
   :name "Shield Slam"
   :quality :epic
+  :set :expert
   :class :warrior
   :cost 1
   :spell (target :minion #((damage-target (hero-armor %)) %))
@@ -931,6 +1073,7 @@
   :id 210
   :name "Snake Trap"
   :quality :epic
+  :set :expert
   :class :hunter
   :cost 2
   :secret {
@@ -942,6 +1085,7 @@
   :id 324
   :name "Southsea Captain"
   :quality :epic
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -954,6 +1098,7 @@
   :id 309
   :name "Spellbender"
   :quality :epic
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -968,6 +1113,7 @@
   :id 645
   :name "Spellbender"
   :quality :epic
+  :set :expert
   :class :mage
   :cost 0
   :minion {
@@ -979,6 +1125,7 @@
   :id 567
   :name "Sword of Justice"
   :quality :epic
+  :set :expert
   :class :paladin
   :cost 3
   :weapon {
@@ -991,7 +1138,9 @@
   :id 398
   :name "Twisting Nether"
   :quality :epic
+  :set :expert
   :class :warlock
+  :cost 8
   :spell (destroy-minions)
 }
 ; Rares
@@ -999,6 +1148,7 @@
   :id 597
   :name "Abomination"
   :quality :rare
+  :set :expert
   :cost 5
   :minion {
     :attack 4
@@ -1011,6 +1161,7 @@
   :id 425
   :name "Alarm-o-Bot"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 0
@@ -1024,6 +1175,7 @@
   :id 23
   :name "Aldor Peacekeeper"
   :quality :rare
+  :set :expert
   :class :paladin
   :cost 3
   :minion {
@@ -1037,6 +1189,7 @@
   :id 526
   :name "Ancestral Spirit"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 2
   :spell (target [:minion]
@@ -1046,6 +1199,7 @@
   :id 176
   :name "Ancient Mage"
   :quality :rare
+  :set :expert
   :cost 4
   :minion {
     :attack 2
@@ -1058,6 +1212,7 @@
   :id 153
   :name "Ancient Watcher"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 4
@@ -1069,6 +1224,7 @@
   :id 57
   :name "Angry Chicken"
   :quality :rare
+  :set :expert
   :cost 1
   :minon {
     :attack 1
@@ -1081,6 +1237,7 @@
   :id 97
   :name "Arcane Golem"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 4
@@ -1094,6 +1251,7 @@
   :id 463
   :name "Argent Commander"
   :quality :rare
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -1105,6 +1263,7 @@
   :id 644
   :name "Armorsmith"
   :quality :rare
+  :set :expert
   :class :warrior
   :cost 2
   :minion {
@@ -1118,6 +1277,7 @@
   :id 656
   :name "Auchenai Soulpriest"
   :quality :rare
+  :set :expert
   :class :priest
   :cost 4
   :minion {
@@ -1131,6 +1291,7 @@
   :id 280
   :name "Azure Drake"
   :quality :rare
+  :set :expert
   :cost 5
   :minion {
     :attack 4
@@ -1144,6 +1305,7 @@
   :id 266
   :name "Bite"
   :quality :rare
+  :set :expert
   :class :druid
   :cost 4
   :spell (target [:my :hero] (give-target {:armor 4 :attack-this-turn 4}))
@@ -1152,6 +1314,7 @@
   :id 244
   :name "Blade Flurry"
   :quality :rare
+  :set :expert
   :class :rogue
   :cost 2
   :spell #(-> %
@@ -1162,6 +1325,7 @@
   :id 7
   :name "Blessed Champion"
   :quality :rare
+  :set :expert
   :class :paladin
   :cost 5
   :spell (target [:minion]
@@ -1171,6 +1335,7 @@
   :id 276
   :name "Blizzard"
   :quality :rare
+  :set :expert
   :class :mage
   :cost 6
   :spell (target-all [:opponent :minion]
@@ -1182,6 +1347,7 @@
   :id 453
   :name "Bloodsail Corsair"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -1194,6 +1360,7 @@
   :id 88
   :name "Coldlight Oracle"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -1206,6 +1373,7 @@
   :id 424
   :name "Coldlight Seer"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -1218,6 +1386,7 @@
   :id 166
   :name "Commanding Shout"
   :quality :rare
+  :set :expert
   :class :warrior
   :cost 2
   :spell #(-> %
@@ -1228,6 +1397,7 @@
   :id 531
   :name "Counterspell"
   :quality :rare
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -1238,6 +1408,7 @@
   :id 612
   :name "Crazed Alchemist"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -1251,6 +1422,7 @@
   :id 542
   :name "Defender of Argus"
   :quality :rare
+  :set :expert
   :cost 4
   :minion {
     :attack 3
@@ -1263,6 +1435,7 @@
   :id 212
   :name "Demolisher"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 1
@@ -1275,6 +1448,7 @@
   :id 581
   :name "Divine Favor"
   :quality :rare
+  :set :expert
   :class :paladin
   :cost 3
   :spell #((draw-cards (-
@@ -1285,6 +1459,7 @@
   :id 507
   :name "Doomguard"
   :quality :rare
+  :set :expert
   :class :warlock
   :cost 5
   :minion {
@@ -1299,6 +1474,7 @@
   :id 363
   :name "Eaglehorn Bow"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 3
   :weapon {
@@ -1311,6 +1487,7 @@
   :id 625
   :name "Emperor Cobra"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -1323,6 +1500,7 @@
   :id 383
   :name "Equality"
   :quality :rare
+  :set :expert
   :class :paladin
   :cost 2
   :spell (target-all :minion (set-target {:health 1}))
@@ -1331,6 +1509,7 @@
   :id 125
   :name "Ethereal Arcanist"
   :quality :rare
+  :set :expert
   :class :mage
   :cost 4
   :minion {
@@ -1345,6 +1524,7 @@
   :id 114
   :name "Explosive Shot"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 5
   :spell (comp
@@ -1355,6 +1535,7 @@
   :id 236
   :name "Felguard"
   :quality :rare
+  :set :expert
   :class :warlock
   :cost 3
   :minion {
@@ -1368,6 +1549,7 @@
   :id 214
   :name "Feral Spirit"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 3
   :overload 2
@@ -1377,6 +1559,7 @@
   :id 630
   :name "Flare"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 1
   :spell #(-> %
@@ -1389,6 +1572,7 @@
   :id 69
   :name "Frothing Berserker"
   :quality :rare
+  :set :expert
   :class :warrior
   :cost 3
   :minion {
@@ -1401,6 +1585,7 @@
   :id 131
   :name "Gadgetzan Auctioneer"
   :quality :rare
+  :set :expert
   :cost 5
   :minion {
     :attack 4
@@ -1412,6 +1597,7 @@
   :id 135
   :name "Headcrack"
   :quality :rare
+  :set :expert
   :class :rogue
   :cost 3
   :spell (target [:opponent :hero] (damage-target 2))
@@ -1421,6 +1607,7 @@
   :id 457
   :name "Holy Fire"
   :quality :rare
+  :set :expert
   :class :priest
   :cost 6
   :spell #(-> %
@@ -1431,6 +1618,7 @@
   :id 355
   :name "Holy Wrath"
   :quality :rare
+  :set :expert
   :class :paladin
   :cost 5
   ; let this be known as the first time I've restored to let
@@ -1441,6 +1629,7 @@
   :id 689
   :name "Hyena"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 2
   :minion {
@@ -1453,6 +1642,7 @@
   :id 321
   :name "Imp"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -1464,6 +1654,7 @@
   :id 178
   :name "Imp Master"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 1
@@ -1477,6 +1668,7 @@
   :id 209
   :name "Injured Blademaster"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 4
@@ -1488,6 +1680,7 @@
   :id 459
   :name "Keeper of the Grove"
   :quality :rare
+  :set :expert
   :class :druid
   :cost 4
   :minion {
@@ -1502,6 +1695,7 @@
   :id 411
   :name "Kirin Tor Mage"
   :quality :rare
+  :set :expert
   :class :mage
   :cost 3
   :minion {
@@ -1514,6 +1708,7 @@
   :id 422
   :name "Knife Juggler"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -1525,6 +1720,7 @@
   :id 679
   :name "Lava Burst"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 3
   :overload 2
@@ -1534,6 +1730,7 @@
   :id 676
   :name "Lightning Storm"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 3
   :overload 2
@@ -1544,6 +1741,7 @@
   :id 436
   :name "Lightwarden"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -1555,6 +1753,7 @@
   :id 117
   :name "Lightwell"
   :quality :rare
+  :set :expert
   :class :priest
   :cost 2
   :minion {
@@ -1568,6 +1767,7 @@
   :id 67
   :name "Mana Addict"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 1
@@ -1579,6 +1779,7 @@
   :id 613
   :name "Mana Tide Totem"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 3
   :minion {
@@ -1592,6 +1793,7 @@
   :id 197
   :name "Mana Wraith"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -1603,6 +1805,7 @@
   :id 249
   :name "Mass Dispel"
   :quality :rare
+  :set :expert
   :class :priest
   :cost 4
   :spell (target-all [:opponent :minion] (silence-target))
@@ -1611,6 +1814,7 @@
   :id 127
   :name "Master of Disguise"
   :quality :rare
+  :set :expert
   :class :rogue
   :cost 4
   :minion {
@@ -1623,6 +1827,7 @@
   :id 584
   :name "Master Swordsmith"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 1
@@ -1635,6 +1840,7 @@
   :id 368
   :name "Mind Control Tech"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -1647,6 +1853,7 @@
   :id 447
   :name "Misdirection"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 2
   :secret {
@@ -1658,6 +1865,7 @@
   :id 345
   :name "Mortal Strike"
   :quality :rare
+  :set :expert
   :class :warrior
   :cost 4
   :spell #(if (<= (hero-health %) 12)
@@ -1668,6 +1876,7 @@
   :id 420
   :name "Murloc Tidecaller"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -1682,6 +1891,7 @@
   :id 120
   :name "Nourish"
   :quality :rare
+  :set :expert
   :class :druid
   :cost 5
   :spell (choose 485 58)
@@ -1692,6 +1902,7 @@
   :id 82
   :name "Perdition's Blade"
   :quality :rare
+  :set :expert
   :class :rogue
   :cost 3
   :weapon {
@@ -1706,6 +1917,7 @@
   :id 54
   :name "Pint-Sized Summoner"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -1717,6 +1929,7 @@
   :id 157
   :name "Questing Adventurer"
   :quality :rare
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -1728,6 +1941,7 @@
   :id 518
   :name "Ravenholdt Assassin"
   :quality :rare
+  :set :expert
   :cost 7
   :minion {
     :attack 7
@@ -1739,6 +1953,7 @@
   :id 148
   :name "Savagery"
   :quality :rare
+  :set :expert
   :class :druid
   :cost 1
   :spell (target []
@@ -1748,6 +1963,7 @@
   :id 8
   :name "Savannah Highmane"
   :quality :rare
+  :set :expert
   :class :hunter
   :cost 6
   :minion {
@@ -1761,6 +1977,7 @@
   :id 483
   :name "Secretkeeper"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -1772,6 +1989,7 @@
   :id 442
   :name "Shadow Madness"
   :quality :rare
+  :set :expert
   :class :priest
   :cost 4
   :spell (target [:opponent :minion #(<= (:attack %) 3)]
@@ -1781,6 +1999,7 @@
   :id 673
   :name "Shadowflame"
   :quality :rare
+  :set :expert
   :class :warlock
   :cost 4
   :spell (target [:my :minion] #(-> %
@@ -1792,6 +2011,7 @@
   :id 286
   :name "SI:7 Agent"
   :quality :rare
+  :set :expert
   :class :rogue
   :cost 3
   :minion {
@@ -1804,6 +2024,7 @@
   :id 573
   :name "Siphon Soul"
   :quality :rare
+  :set :expert
   :class :warlock
   :cost 6
   :spell (target [:minion] #(-> %
@@ -1814,6 +2035,7 @@
   :id 451
   :name "Spirit Wolf"
   :quality :rare
+  :set :expert
   :class :shaman
   :cost 2
   :minion {
@@ -1826,6 +2048,7 @@
   :id 389
   :name "Stampeding Kodo"
   :quality :rare
+  :set :expert
   :cost 5
   :minion {
     :attack 3
@@ -1839,6 +2062,7 @@
   :id 464
   :name "Starfall"
   :quality :rare
+  :set :expert
   :class :druid
   :cost 5
   :spell (choose 195 653)
@@ -1849,6 +2073,7 @@
   :id 372
   :name "Sunfury Protector"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -1860,6 +2085,7 @@
   :id 221
   :name "Sunwalker"
   :quality :rare
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -1871,6 +2097,7 @@
   :id 360
   :name "Twilight Drake"
   :quality :rare
+  :set :expert
   :cost 4
   :minion {
     :attack 4
@@ -1883,6 +2110,7 @@
   :id 638
   :name "Upgrade!"
   :quality :rare
+  :set :expert
   :class :warrior
   :cost 1
   :spell (target [:my :hero] #(if (:weapon (current-target %))
@@ -1893,6 +2121,7 @@
   :id 160
   :name "Vaporize"
   :quality :rare
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -1904,6 +2133,7 @@
   :id 523
   :name "Violet Teacher"
   :quality :rare
+  :set :expert
   :cost 4
   :minion {
     :attack 3
@@ -1915,6 +2145,7 @@
   :id 119
   :name "Void Terror"
   :quality :rare
+  :set :expert
   :class :warlock
   :cost 3
   :minion {
@@ -1931,6 +2162,7 @@
   :id 25
   :name "Wild Pyromancer"
   :quality :rare
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -1942,6 +2174,7 @@
   :id 123
   :name "Young Priestess"
   :quality :rare
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -1955,6 +2188,7 @@
   :id 577
   :name "Abusive Sergeant"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -1967,6 +2201,7 @@
   :id 428
   :name "Acolyte of Pain"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 1
@@ -1978,6 +2213,7 @@
   :id 641
   :name "Amani Berserker"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -1989,6 +2225,7 @@
   :id 572
   :name "Ancient Brewmaster"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 5
@@ -2000,7 +2237,9 @@
 {
   :id 243
   :name "Ancient Secrets"
-  :quality :common
+  :quality :free
+  :set :expert
+
   :class :druid
   :cost 0
   :spell (target [] (restore-health 5))
@@ -2008,7 +2247,8 @@
 {
   :id 517
   :name "Ancient Teachings"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (draw-cards 2)
@@ -2017,6 +2257,7 @@
   :id 504
   :name "Arathi Weaponsmith"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 4
   :minion {
@@ -2029,6 +2270,7 @@
   :id 191
   :name "Argent Protector"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 2
   :minion {
@@ -2042,6 +2284,7 @@
   :id 473
   :name "Argent Squire"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -2052,14 +2295,16 @@
 {
   :id 231
   :name "Bananas"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 1
   :spell (target [:minion] (buff-target 1 1))
 }
 {
   :id 403
   :name "Battle Axe"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :warrior
   :cost 1
   :weapon {
@@ -2071,6 +2316,7 @@
   :id 664
   :name "Battle Rage"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 2
   :spell (target-all [:my :damaged] (draw-cards 1))
@@ -2079,6 +2325,7 @@
   :id 662
   :name "Bear Form"
   :quality :common
+  :set :expert
   :class :druid
   :cost 0
   ; question: does choose one force the target?
@@ -2089,6 +2336,7 @@
   :id 198
   :name "Betrayal"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 2
   :spell (target [:opponent :minion]
@@ -2099,6 +2347,7 @@
   :id 100
   :name "Blessing of Wisdom"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :spell (target [:minion] (give-target {
@@ -2109,7 +2358,8 @@
 {
   :id 669
   :name "Blood Fury"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :warlock
   :cost 3
   :weapon { ; Jaraxxus
@@ -2121,6 +2371,7 @@
   :id 196
   :name "Blood Imp"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 1
   :minion {
@@ -2135,6 +2386,7 @@
   :id 637
   :name "Bloodsail Raider"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -2148,6 +2400,7 @@
   :id 287
   :name "Cat Form"
   :quality :common
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:minion] (give-target :charge)) ; todo: :self / poly
@@ -2156,6 +2409,7 @@
   :id 38
   :name "Circle of Healing"
   :quality :common
+  :set :expert
   :class :priest
   :cost 0
   :spell (target-all [:minion] (restore-health 4))
@@ -2164,6 +2418,7 @@
   :id 92
   :name "Cold Blood"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 1
   :spell (target [:minion] (combo (buff-target 2 0) (buff-target 4 0)))
@@ -2172,6 +2427,7 @@
   :id 284
   :name "Conceal"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 1
   :spell (target-all [:my :minion] (give-target
@@ -2181,6 +2437,7 @@
   :id 26
   :name "Cone of Cold"
   :quality :common
+  :set :expert
   :class :mage
   :cost 4
   :spell (target [:minion] #(let [
@@ -2191,6 +2448,7 @@
   :id 328
   :name "Cruel Taskmaster"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 2
   :minion {
@@ -2204,6 +2462,7 @@
   :id 140
   :name "Cult Master"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 4
@@ -2215,6 +2474,7 @@
   :id 200
   :name "Damaged Golem"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -2225,6 +2485,7 @@
   :id 128
   :name "Dark Iron Dwarf"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 4
@@ -2236,6 +2497,7 @@
   :id 239
   :name "Deadly Shot"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 3
   :spell (target-random [:opponent :minion] (destroy-target))
@@ -2244,6 +2506,7 @@
   :id 318
   :name "Defender"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :minion {
@@ -2254,7 +2517,8 @@
 {
   :id 9
   :name "Defias Bandit"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :rogue
   :cost 1
   :minion {
@@ -2266,6 +2530,7 @@
   :id 417
   :name "Defias Ringleader"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 2
   :minion {
@@ -2277,7 +2542,8 @@
 {
   :id 358
   :name "Demigod's Favor"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target-all [:my :minion {:not :self}] (buff-target 2 2))
@@ -2286,6 +2552,7 @@
   :id 452
   :name "Demonfire"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 2
   :spell (target [:minion] #(let [target (current-target %)]
@@ -2297,6 +2564,7 @@
   :id 354
   :name "Devilsaur"
   :quality :common
+  :set :expert
   :cost 5
   :minion {
     :attack 5
@@ -2308,6 +2576,7 @@
   :id 305
   :name "Dire Wolf Alpha"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -2319,7 +2588,8 @@
 {
   :id 524
   :name "Dispel"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :spell (target [:minion] (silence-target))
 }
@@ -2327,6 +2597,7 @@
   :id 261
   :name "Dread Corsair"
   :quality :common
+  :set :expert
   :cost #(- 4 (or 0 (:attack (:weapon (my-hero %)))))
   :minion {
     :attack 3
@@ -2338,7 +2609,8 @@
 {
   :id 561
   :name "Dream"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 0
   :spell (target [:minion] (return-target))
 }
@@ -2346,6 +2618,7 @@
   :id 587
   :name "Druid of the Claw"
   :quality :common
+  :set :expert
   :class :druid
   :cost 5
   :minion {
@@ -2362,6 +2635,7 @@
   :id 408
   :name "Druid of the Claw"
   :quality :common
+  :set :expert
   :class :druid
   :cost 5
   :minion {
@@ -2374,6 +2648,7 @@
   :id 45
   :name "Druid of the Claw"
   :quality :common
+  :set :expert
   :class :druid
   :cost 5
   :minion {
@@ -2386,6 +2661,7 @@
   :id 129
   :name "Dust Devil"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 1
   :overload 2
@@ -2399,6 +2675,7 @@
   :id 77
   :name "Earth Shock"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 1
   :spell (target [:minion] #(-> % (silence-target) (damage-target 1)))
@@ -2407,6 +2684,7 @@
   :id 557
   :name "Earthen Ring Farseer"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -2417,7 +2695,8 @@
 {
   :id 534
   :name "Emerald Drake"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 4
   :minion {
     :attack 7
@@ -2429,6 +2708,7 @@
   :id 382
   :name "Eviscerate"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 2
   :spell (target [] (combo (damage-target 2) (damage-target 4)))
@@ -2437,6 +2717,7 @@
   :id 344
   :name "Explosive Trap"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 2
   :secret {
@@ -2447,6 +2728,7 @@
   :id 206
   :name "Eye for an Eye"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :secret {
@@ -2458,6 +2740,7 @@
   :id 213
   :name "Faerie Dragon"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -2470,6 +2753,7 @@
   :id 476
   :name "Fen Creeper"
   :quality :common
+  :set :expert
   :cost 5
   :minion {
     :attack 3
@@ -2481,6 +2765,7 @@
   :id 85
   :name "Flame Imp"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 1
   :minion {
@@ -2493,7 +2778,8 @@
 {
   :id 685
   :name "Flame of Azzinoth"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -2504,6 +2790,7 @@
   :id 610
   :name "Flesheating Ghoul"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -2515,6 +2802,7 @@
   :id 530
   :name "Forked Lightning"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 1
   :overload 2
@@ -2524,10 +2812,11 @@
   :id 99
   :name "Freezing Trap"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 2
   :secret {
-    ; todo: make sure this supplies target as the attacker
+    ; todo: make sure this supplies attacker as the target
     :when-opponent-minion-attacks #(-> %
       (return-target)
       (give-target {:cost 2}))
@@ -2537,6 +2826,7 @@
   :id 598
   :name "Frost Elemental"
   :quality :common
+  :set :expert
   :cost 6
   :minion {
     :attack 5
@@ -2547,7 +2837,8 @@
 {
   :id 565
   :name "Gnoll"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -2559,6 +2850,7 @@
   :id 386
   :name "Harvest Golem"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -2569,7 +2861,8 @@
 {
   :id 583
   :name "Heavy Axe"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :warrior
   :cost 1
   :weapon {
@@ -2581,6 +2874,7 @@
   :id 672
   :name "Ice Barrier"
   :quality :common
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -2592,6 +2886,7 @@
   :id 188
   :name "Ice Lance"
   :quality :common
+  :set :expert
   :class :mage
   :cost 1
   :spell (target [] #(if (:freeze (current-target %))
@@ -2602,6 +2897,7 @@
   :id 121
   :name "Infernal"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 6
   :minion {
@@ -2613,7 +2909,8 @@
 {
   :id 83
   :name "INFERNO!"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :warlock
   :cost 2
   :hero-power (summon-minion "Infernal")
@@ -2622,15 +2919,26 @@
   :id 207
   :name "Inner Fire"
   :quality :common
+  :set :expert
   :class :priest
   :cost 1
   :spell (target [:minion] #(let [health (:health (current-target))]
     (-> % (set-target {:attack health}))))
 }
 {
+  :id 366
+  :name "Inner Rage"
+  :quality :common
+  :set :expert
+  :class :warrior
+  :cost 0
+  :spell ;...
+}
+{
   :id 500
   :name "Ironbeak Owl"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -2643,6 +2951,7 @@
   :id 392
   :name "Jungle Panther"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 4
@@ -2654,7 +2963,8 @@
 {
   :id 116
   :name "Laughing Sister"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -2665,7 +2975,8 @@
 {
   :id 204
   :name "Leader of the Pack"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target-all [:my :minion] (buff-target 1 1))
@@ -2674,6 +2985,7 @@
   :id 513
   :name "Leper Gnome"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -2685,6 +2997,7 @@
   :id 10
   :name "Lightning Bolt"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 1
   :overload 1
@@ -2694,6 +3007,7 @@
   :id 192
   :name "Lightspawn"
   :quality :common
+  :set :expert
   :class :priest
   :cost 4
   :minion {
@@ -2708,6 +3022,7 @@
   :id 395
   :name "Loot Hoarder"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 2
@@ -2719,6 +3034,7 @@
   :id 80
   :name "Mad Bomber"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -2731,6 +3047,7 @@
   :id 263
   :name "Mana Wyrm"
   :quality :common
+  :set :expert
   :class :mage
   :cost 1
   :minion {
@@ -2744,6 +3061,7 @@
   :id 149
   :name "Mark of Nature"
   :quality :common
+  :set :expert
   :class :druid
   :cost 3
   :spell (choose 430 133)
@@ -2751,7 +3069,8 @@
 {
   :id 430
   :name "Mark of Nature"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:minion] (buff-target 4 0))
@@ -2759,7 +3078,8 @@
 {
   :id 133
   :name "Mark of Nature"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:minion] (give-target {:health 4 :taunt true}))
@@ -2767,7 +3087,8 @@
 {
   :id 229
   :name "Mind Shatter"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :priest
   :cost 2
   :hero-power (target [] (damage-target 3))
@@ -2775,7 +3096,8 @@
 {
   :id 70
   :name "Mind Spike"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :priest
   :cost 2
   :hero-power (target [] (damage-target 2))
@@ -2784,6 +3106,7 @@
   :id 569
   :name "Mirror Entity"
   :quality :common
+  :set :expert
   :class :mage
   :cost 3
   :secret {
@@ -2794,6 +3117,7 @@
   :id 346
   :name "Mogu'shan Warden"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 1
@@ -2804,7 +3128,8 @@
 {
   :id 111
   :name "Moonfire"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [] (damage-target 2))
@@ -2813,6 +3138,7 @@
   :id 154
   :name "Naturalize"
   :quality :common
+  :set :expert
   :class :druid
   :cost 1
   :spell (target [:minion] #(-> % (destroy-target) (draw-opponent-cards 2)))
@@ -2820,7 +3146,8 @@
 {
   :id 334
   :name "Nightmare"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 0
   :spell (target [:minion] (give-target {
     :health 5 :attack 5
@@ -2830,6 +3157,7 @@
   :id 158
   :name "Noble Sacrifice"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :secret {
@@ -2841,7 +3169,8 @@
 {
   :id 58
   :name "Nourish"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:my :hero] (give-target {:mana-crystal 2}))
@@ -2849,7 +3178,8 @@
 {
   :id 485
   :name "Nourish"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (draw-cards 3)
@@ -2858,6 +3188,7 @@
   :id 190
   :name "Panther"
   :quality :common
+  :set :expert
   :class :druid
   :cost 2
   :minion {
@@ -2870,6 +3201,7 @@
   :id 165
   :name "Power of the Wild"
   :quality :common
+  :set :expert
   :class :druid
   :cost 2
   :spell (choose "Summon a Panther" "Leader of the Pack")
@@ -2878,6 +3210,7 @@
   :id 170
   :name "Power Overwhelming"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 1
   :spell (target [:my :minion] (give-target {
@@ -2888,6 +3221,7 @@
   :id 138
   :name "Priestess of Elune"
   :quality :common
+  :set :expert
   :cost 6
   :minion {
     :attack 5
@@ -2899,6 +3233,7 @@
   :id 95
   :name "Raging Worgen"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -2910,6 +3245,7 @@
   :id 454
   :name "Rampage"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 2
   :spell (target [:minion :damaged] (buff-target 3 3))
@@ -2918,6 +3254,7 @@
   :id 657
   :name "Redemption"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :secret {
@@ -2931,6 +3268,7 @@
   :id 642
   :name "Repentance"
   :quality :common
+  :set :expert
   :class :paladin
   :cost 1
   :secret {
@@ -2941,7 +3279,8 @@
 {
   :id 375
   :name "Rooted"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:self] (give-target {:health 5 :taunt true}))
@@ -2950,6 +3289,7 @@
   :id 475
   :name "Scarlet Crusader"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -2961,6 +3301,7 @@
   :id 279
   :name "Scavenging Hyena"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 2
   :minion {
@@ -2975,6 +3316,7 @@
   :id 327
   :name "Sense Demons"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 3
   :spell (target-random [2 :undrawn :demon]
@@ -2984,6 +3326,7 @@
   :id 550
   :name "Shadowstep"
   :quality :common
+  :set :expert
   :class :rogue
   :cost 0
   :spell (target [:my :minion] #(-> %
@@ -2993,7 +3336,8 @@
 {
   :id 159
   :name "Shan'do's Lesson"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (summon-minion [181 181]) ; 181 = 2/2 Treant w/ Taunt
@@ -3002,6 +3346,7 @@
   :id 24
   :name "Shieldbearer"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 0
@@ -3013,6 +3358,7 @@
   :id 544
   :name "Silence"
   :quality :common
+  :set :expert
   :class :priest
   :cost 0
   :spell (target [:minion] (silence-target))
@@ -3021,6 +3367,7 @@
   :id 648
   :name "Silver Hand Knight"
   :quality :common
+  :set :expert
   :cost 5
   :minion {
     :attack 4
@@ -3032,6 +3379,7 @@
   :id 634
   :name "Silvermoon Guardian"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 3
@@ -3042,7 +3390,8 @@
 {
   :id 255
   :name "Skeleton"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 3
   :minion {
     :attack 3
@@ -3053,6 +3402,7 @@
   :id 215
   :name "Slam"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 2
   :spell (target [:minion] #(-> %
@@ -3064,6 +3414,7 @@
   :id 512
   :name "Snake"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 0
   :minion {
@@ -3076,6 +3427,7 @@
   :id 553
   :name "Snipe"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 2
   :secret {
@@ -3086,6 +3438,7 @@
   :id 4
   :name "Sorcerer's Apprentice"
   :quality :common
+  :set :expert
   :class :mage
   :cost 2
   :minion {
@@ -3098,6 +3451,7 @@
   :id 311
   :name "Soul of the Forest"
   :quality :common
+  :set :expert
   :class :druid
   :cost 4
   :spell (target-all [:my :minion]
@@ -3108,6 +3462,7 @@
   :id 103
   :name "Southsea Deckhand"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -3121,6 +3476,7 @@
   :id 42
   :name "Spellbreaker"
   :quality :common
+  :set :expert
   :cost 4
   :minion {
     :attack 4
@@ -3132,6 +3488,7 @@
   :id 627
   :name "Spiteful Smith"
   :quality :common
+  :set :expert
   :class :warrior
   :cost 5
   :minion {
@@ -3144,6 +3501,7 @@
   :id 21
   :name "Squire"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -3154,6 +3512,7 @@
   :id 469
   :name "Squirrel"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -3164,7 +3523,8 @@
 {
   :id 653
   :name "Starfall"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target-all [:opponent :minion] (damage-target 2))
@@ -3181,6 +3541,7 @@
   :id 152
   :name "Stormforged Axe"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 2
   :overload 1
@@ -3193,6 +3554,7 @@
   :id 338
   :name "Stranglethorn Tiger"
   :quality :common
+  :set :expert
   :cost 5
   :minion {
     :attack 5
@@ -3204,7 +3566,8 @@
 {
   :id 219
   :name "Summon a Panther"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (summon-minion "Panther")
@@ -3213,6 +3576,7 @@
   :id 566
   :name "Summoning Portal"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 4
   :minion {
@@ -3225,6 +3589,7 @@
   :id 477
   :name "Tauren Warrior"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -3237,6 +3602,7 @@
   :id 232
   :name "Temple Enforcer"
   :quality :common
+  :set :expert
   :class :priest
   :cost 6
   :minion {
@@ -3249,6 +3615,7 @@
   :id 62
   :name "Thoughtsteal"
   :quality :common
+  :set :expert
   :class :priest
   :cost 3
   :spell (target-random [2 :opponent :undrawn] #(-> %
@@ -3258,6 +3625,7 @@
   :id 265
   :name "Thrallmar Farseer"
   :quality :common
+  :set :expert
   :cost 3
   :minion {
     :attack 2
@@ -3268,7 +3636,8 @@
 {
   :id 272
   :name "Treant"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 1
   :minion {
@@ -3280,6 +3649,7 @@
   :id 337
   :name "Treant"
   :quality :common
+  :set :expert
   :class :druid
   :cost 1
   :minion {
@@ -3292,7 +3662,8 @@
 {
   :id 181
   :name "Treant"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 1
   :minion {
@@ -3305,6 +3676,7 @@
   :id 51
   :name "Unbound Elemental"
   :quality :common
+  :set :expert
   :class :shaman
   :cost 3
   :minion {
@@ -3318,6 +3690,7 @@
   :id 317
   :name "Unleash the Hounds"
   :quality :common
+  :set :expert
   :class :hunter
   :cost 4
   :spell (target-all [:opponent :minion] (summon-minion "Hound"))
@@ -3325,7 +3698,8 @@
 {
   :id 262
   :name "Uproot"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:self] (buff-target 5 0))
@@ -3334,6 +3708,7 @@
   :id 509
   :name "Venture Co. Mercenary"
   :quality :common
+  :set :expert
   :cost 5
   :minion {
     :attack 7
@@ -3344,7 +3719,8 @@
 {
   :id 63
   :name "Violet Apprentice"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 0
   :minion {
     :attack 1
@@ -3354,7 +3730,8 @@
 {
   :id 527
   :name "Whelp"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -3366,6 +3743,7 @@
   :id 675
   :name "Windfury Harpy"
   :quality :common
+  :set :expert
   :cost 6
   :minion {
     :attack 4
@@ -3377,6 +3755,7 @@
   :id 273
   :name "Wisp"
   :quality :common
+  :set :expert
   :cost 0
   :minion {
     :attack 1
@@ -3387,6 +3766,7 @@
   :id 112
   :name "Worgen Infiltrator"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 2
@@ -3398,6 +3778,7 @@
   :id 230
   :name "Worthless Imp"
   :quality :common
+  :set :expert
   :class :warlock
   :cost 1
   :minion {
@@ -3410,6 +3791,7 @@
   :id 633
   :name "Wrath"
   :quality :common
+  :set :expert
   :class :druid
   :cost 2
   :spell (choose 234 501)
@@ -3417,7 +3799,8 @@
 {
   :id 234
   :name "Wrath"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:minion] (damage-target 3))
@@ -3425,7 +3808,8 @@
 {
   :id 501
   :name "Wrath"
-  :quality :common
+  :quality :free
+  :set :expert
   :class :druid
   :cost 0
   :spell (target [:minion] #(-> % (damage-target 1) (draw-cards 1)))
@@ -3434,6 +3818,7 @@
   :id 629
   :name "Young Dragonhawk"
   :quality :common
+  :set :expert
   :cost 1
   :minion {
     :attack 1
@@ -3446,6 +3831,7 @@
   :id 247
   :name "Youthful Brewmaster"
   :quality :common
+  :set :expert
   :cost 2
   :minion {
     :attack 3
@@ -3456,7 +3842,8 @@
 {
   :id 235
   :name "Ysera Awakens"
-  :quality :common
+  :quality :free
+  :set :expert
   :cost 2
   :spell (target-all [#(not= (:name %) "Ysera")]
     (damage-target 5))
@@ -3464,7 +3851,8 @@
 {
   :id 74
   :name "Acidic Swamp Ooze"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 2
   :minion {
     :attack 3
@@ -3475,7 +3863,8 @@
 {
   :id 578
   :name "Animal Companion"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :hunter
   :cost 3
   :spell #(-> % (summon-minion (rand-nth ["Misha" "Leokk" "Huffer"])))
@@ -3483,7 +3872,8 @@
 {
   :id 182
   :name "Arcanite Reaper"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :warrior
   :cost 5
   :weapon {
@@ -3494,7 +3884,8 @@
 {
   :id 545
   :name "Archmage"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 6
   :minion {
     :attack 4
@@ -3505,7 +3896,8 @@
 {
   :id 433
   :name "Assassin's Blade"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :rogue
   :cost 5
   :weapon {
@@ -3516,16 +3908,16 @@
 {
   :id 156
   :name "Bananas"
-  :quality :free
-  :collectible false
+  :quality :common
+  :set :missions
   :cost 1
   :spell (target [:my :minion] (buff-target 1 1))
 }
 {
   :id 376
   :name "Barrel"
-  :quality :free
-  :collectible false
+  :quality :common
+  :set :missions
   :cost 0
   :minion {
     :attack 0
@@ -3536,15 +3928,16 @@
 {
   :id 606
   :name "Barrel Toss"
-  :quality :free
-  :collectible false
+  :quality :common
+  :set :missions
   :cost 1
   :spell (target [] (damage-target 2))
 }
 {
   :id 29
   :name "Blessing of Kings"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :paladin
   :cost 4
   :spell (target [:minion] (buff-target 4 4))
@@ -3552,7 +3945,8 @@
 {
   :id 256
   :name "Bloodlust"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :shaman
   :cost 5
   :spell (target-all [:my :minion] (give-target {:attack-this-turn 3}))
@@ -3560,7 +3954,8 @@
 {
   :id 289
   :name "Bluegill Warrior"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 2
   :minion {
     :attack 2
@@ -3572,7 +3967,8 @@
 {
   :id 65
   :name "Boar"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 1
   :minion {
     :attack 1
@@ -3583,7 +3979,8 @@
 {
   :id 27
   :name "Booty Bay Bodyguard"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 5
   :minion {
     :attack 5
@@ -3595,7 +3992,8 @@
   :id 397
   :name "Brewmaster"
   ; todo: add collectible false to all uncollectibles (or collectible true?)
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 4
   :minion {
     :attack 4
@@ -3605,7 +4003,8 @@
 {
   :id 31
   :name "Chillwind Yeti"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 4
   :minion {
     :attack 4
@@ -3615,7 +4014,8 @@
 {
   :id 81
   :name "Cleave"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :warrior
   :cost 2
   ; todo: determine how to apply spell damage effects
@@ -3624,7 +4024,8 @@
 {
   :id 260
   :name "Consecration"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :paladin
   :cost 4
   :spell (target-all [:opponent] (damage-target 2))
@@ -3632,7 +4033,8 @@
 {
   :id 173
   :name "Core Hound"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 7
   :minion {
     :attack 9
@@ -3643,7 +4045,8 @@
 {
   :id 252
   :name "Corruption"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :warlock
   :cost 1
   :spell (target [:opponent :minion] (give-target
@@ -3652,7 +4055,8 @@
 {
   :id 377
   :name "Crazed Hunter"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 1
   :minion {
     :attack 1
@@ -3662,7 +4066,8 @@
 {
   :id 393
   :name "Crazy Monkey"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 1
   :minion {
     :attack 1
@@ -3673,7 +4078,8 @@
 {
   :id 388
   :name "Dalaran Mage"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 3
   :minion {
     :attack 1
@@ -3684,7 +4090,8 @@
 {
   :id 84
   :name "Darkscale Healer"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 4
   :minion {
     :attack 4
@@ -3695,7 +4102,8 @@
 {
   :id 554
   :name "Divine Spirit"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :priest
   :cost 2
   :spell (target [:minion] #(let [
@@ -3713,7 +4121,8 @@
 {
   :id 472
   :name "Dragonling Mechanic"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 4
   :minion {
     :attack 2
@@ -3724,7 +4133,8 @@
 {
   :id 36
   :name "Dread Infernal"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :warlock
   :cost 6
   :minion {
@@ -3738,7 +4148,8 @@
 {
   :id 599
   :name "Dual Warglaives"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 6
   :weapon {
     :attack 4
@@ -3748,7 +4159,8 @@
 {
   :id 356
   :name "Elven Archer"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 1
   :minion {
     :attack 1
@@ -3759,7 +4171,8 @@
 {
   :id 240
   :name "Emboldener 3000"
-  :quality :free
+  :quality :common
+  :set :reward
   :cost 1
   :minion {
     :attack 0
@@ -3770,7 +4183,8 @@
 {
   :id 378
   :name "Fan of Knives"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :rogue
   :cost 3
   :spell #(-> %
@@ -3780,8 +4194,8 @@
 {
   :id 636
   :name "Fire Elemental"
-  :quality :free
-  :class :shaman
+  :quality :common
+  :set :basic
   :cost 6
   :minion {
     :attack 6
@@ -3792,14 +4206,16 @@
 {
   :id 622
   :name "Flame Burst"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 3
   :spell (apply comp (repeat 5 (target-random [:opponent] (damage-target 1))))
 }
 {
   :id 455
   :name "Flame of Azzinoth"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 1
   :minion {
     :attack 2
@@ -3809,7 +4225,8 @@
 {
   :id 44
   :name "Flamestrike"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :mage
   :cost 7
   :spell (target-all [:opponent :minion] (damage-target 4))
@@ -3817,7 +4234,8 @@
 {
   :id 390
   :name "Flametongue Totem"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :shaman
   :cost 2
   :minion {
@@ -3830,7 +4248,8 @@
 {
   :id 115
   :name "Frog"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 0
   :minion {
     :attack 0
@@ -3842,7 +4261,8 @@
 {
   :id 49
   :name "Frost Nova"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :mage
   :cost 3
   :spell (target-all [:opponent :minion] (give-target :freeze))
@@ -3850,7 +4270,8 @@
 {
   :id 177
   :name "Frostbolt"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :mage
   :cost 2
   :spell (target [] #(-> % (damage-target 3) (give-target :freeze)))
@@ -3858,7 +4279,8 @@
 {
   :id 663
   :name "Frostwolf Grunt"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 2
   :minion {
     :attack 2
@@ -3869,7 +4291,8 @@
 {
   :id 604
   :name "Frostwolf Warlord"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 5
   :minion {
     :attack 4
@@ -3881,7 +4304,8 @@
 {
   :id 381
   :name "Gnoll"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 1
   :minion {
     :attack 1
@@ -3891,7 +4315,8 @@
 {
   :id 246
   :name "Gnomish Inventor"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 4
   :minion {
     :attack 2
@@ -3902,7 +4327,8 @@
 {
   :id 564
   :name "Goldshire Footman"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 1
   :minion {
     :attack 1
@@ -3913,7 +4339,8 @@
 {
   :id 510
   :name "Grimscale Oracle"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 1
   :minion {
     :attack 1
@@ -3925,7 +4352,8 @@
 {
   :id 283
   :name "Guardian of Kings"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :paladin
   :cost 7
   :minion {
@@ -3937,7 +4365,8 @@
 {
   :id 624
   :name "Gurubashi Berserker"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 5
   :minion {
     :attack 2
@@ -3948,7 +4377,8 @@
 {
   :id 470
   :name "Hemet Nesingwary"
-  :quality :free
+  :quality :common
+  :set :missions
   :hero {
     :hero-power "Shotgun Blast"
     :max-health 20
@@ -3957,7 +4387,8 @@
 {
   :id 387
   :name "Hidden Gnome"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 2
   :minion { ; Was hiding in a barrel! (King Mukla)
     :attack 1
@@ -3967,7 +4398,8 @@
 {
   :id 490
   :name "Hogger"
-  :quality :free
+  :quality :common
+  :set :missions
   :hero {
     :max-health 10
   }
@@ -3975,14 +4407,16 @@
 {
   :id 443
   :name "Hogger SMASH!"
-  :quality :free
+  :quality :common
+  :set :missions
   :cost 3
   :spell (target [] (damage-target 4))
 }
 {
   :id 671
   :name "Holy Nova"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :priest
   :cost 5
   :spell #(-> % (target-all [:opponent] (damage-target 2))
@@ -3991,7 +4425,8 @@
 {
   :id 423
   :name "Homing Chicken"
-  :quality :free
+  :quality :common
+  :set :reward
   :cost 1
   :minion {
     :attack 0
@@ -4002,7 +4437,8 @@
 {
   :id 369
   :name "Huffer"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :hunter
   :cost 3
   :minion {
@@ -4015,7 +4451,8 @@
 {
   :id 189
   :name "Humility"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :paladin
   :cost 1
   :spell (target [:minion] (set-target {:attack 1}))
@@ -4023,7 +4460,8 @@
 {
   :id 22
   :name "Hunter's Mark"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :hunter
   :cost 0
   :spell (target [:minion] (set-target {:health 1 :max-health 1}))
@@ -4031,7 +4469,8 @@
 {
   :id 238
   :name "Ironbark Protector"
-  :quality :free
+  :quality :common
+  :set :basic
   :class :druid
   :cost 8
   :minion {
@@ -4043,7 +4482,8 @@
 {
   :id 41
   :name "Ironforge Rifleman"
-  :quality :free
+  :quality :common
+  :set :basic
   :cost 3
   :minion {
     :attack 2
@@ -4051,7 +4491,6 @@
     :battlecry (target [] (damage-target 1))
   }
 }
-; todo: change above the :rarity/:set
 {
   :id 519
   :name "Ironfur Grizzly"
@@ -4183,7 +4622,7 @@
   :quality :common
   :set :missions
   :cost 6
-  :spell (do-something-crazy) ; Illidan Tutorial
+  :spell #(println "Do something crazy...") ; Illidan Tutorial
 }
 {
   :id 330
@@ -4345,7 +4784,7 @@
   :id 405
   :name "Poultryizer"
   :quality :common
-  :set :debug
+  :set :reward
   :cost 1
   :minion {
     :attack 0
@@ -4370,7 +4809,7 @@
   :id 439
   :name "Repair Bot"
   :quality :common
-  :set :debug
+  :set :reward
   :cost 1
   :minion {
     :attack 0
@@ -4622,7 +5061,7 @@
   :quality :common
   :set :missions
   :cost 1
-  :spell (do-nothing) ; Yeah, no.
+  :spell #(println "Kill minions or something") ; Yeah, no.F
 }
 {
   :id 293
@@ -5490,7 +5929,7 @@
   :hero-power #(let [
     summonable-totems #{275 98 365 298}
     current-totems (set (map :id (filter-all % [:my :totem])))
-    totems-not-summoned (difference summonable-totems current-totems)
+    totems-not-summoned (set/difference summonable-totems current-totems)
     ] (if (> (count (totems-not-summoned)) 0)
       (-> % (summon-minion (rand-nth (seq totems-not-summoned))))))
   ; todo: remember nil state signals an invalid path
