@@ -1,5 +1,6 @@
 ; as of 12/30/2013 via Hearthpwn's card db
-(ns soot.db)
+(ns soot.db
+  (:require (clojure.set)))
 
 (def cards [
 ; Misc
@@ -45,7 +46,7 @@
 {
   :id 716
   :name "Rogues Do It..."
-  :spell (target [:character] (-> % (damage-target 4) (draw-cards 1)))
+  :spell (target [] (-> % (damage-target 4) (draw-cards 1)))
 }
 ; The Coin
 {
@@ -181,7 +182,9 @@
     :attack 12
     :health 12
     :type :dragon
-    :battlecry (comp (destroy-minions) (target-all [:drawn] :all))
+    :battlecry (comp
+      (target-all [:minion {:not :self}] (destroy-target))
+      (target-all [:drawn] (destroy-target)))
   }
 }
 {
@@ -464,7 +467,7 @@
     :attack 8
     :health 8
     :properties [:cant-attack]
-    :end-of-my-turn (target-random :opponent (damage-target 8))
+    :end-of-my-turn (target-random [:opponent] (damage-target 8))
   }
 }
 {
@@ -579,7 +582,7 @@
   :quality :epic
   :class :paladin
   :cost 6
-  :spell (apply comp (repeat 8 (target-random :opponent (damage-target 1))))
+  :spell (apply comp (repeat 8 (target-random [:opponent] (damage-target 1))))
 }
 {
   :id 670
@@ -588,7 +591,7 @@
   :class :warlock
   :cost 5
   :spell #(-> %
-    (target [:character]
+    (target []
       (damage-target 2)
       #(if (is-dead (current-target %))
         ((summon-minion (rand-nth ["Blood Imp" "Voidwalker" "Flame Imp"
@@ -883,7 +886,7 @@
   :quality :epic
   :class :mage
   :cost 8
-  :spell (target [:character] (damage-target 10))
+  :spell (target [] (damage-target 10))
 }
 {
   :id 614
@@ -1013,7 +1016,7 @@
     :attack 0
     :health 3
     :start-of-my-turn #(if (> (count (filter-all % [:my :drawn :minion])) 0)
-      ((target-random [:drawn :minion]
+      ((target-random [:my :drawn :minion]
         (swap-with-target)) %))
   }
 }
@@ -1184,7 +1187,7 @@
     :attack 1
     :health 2
     :type :pirate
-    :battlecry (target [:opponent :hero] (give-target {:weapon-durability -1}))
+    :battlecry (target [:opponent :weapon] (give-target {:durability -1}))
   }
 }
 {
@@ -1289,8 +1292,7 @@
     :health 7
     :type :demon
     :properties [:charge]
-    :battlecry (target-random [2 :my :drawn]
-      (destroy-target))
+    :battlecry (target-random [2 :my :drawn] (destroy-target))
   }
 }
 {
@@ -1422,7 +1424,7 @@
   :class :priest
   :cost 6
   :spell #(-> %
-    (target [:character] (damage-target 5))
+    (target [] (damage-target 5))
     (target [:my :hero] (restore-health 5)))
 }
 {
@@ -1432,7 +1434,7 @@
   :class :paladin
   :cost 5
   ; let this be known as the first time I've restored to let
-  :spell (target [:character] #(let [s ((draw-cards 1) %)]
+  :spell (target [] #(let [s ((draw-cards 1) %)]
     (-> s (damage-target (:cost (last-card-drawn s))))))
 }
 {
@@ -1492,7 +1494,7 @@
     :attack 2
     :health 4
     :battlecry (choose "Moonfire" "Dispel")
-      ; (target [:character] (damage-target 2))
+      ; (target [] (damage-target 2))
       ; (target [:minion] (silence-target)))
   }
 }
@@ -1526,7 +1528,7 @@
   :class :shaman
   :cost 3
   :overload 2
-  :spell (target [:character] (damage-target 5))
+  :spell (target [] (damage-target 5))
 }
 {
   :id 676
@@ -1648,7 +1650,7 @@
   :class :hunter
   :cost 2
   :secret {
-    :when-my-hero-attacked (target-random [:character {:not :attacker}]
+    :when-my-hero-attacked (target-random [{:not :attacker}]
       (redirect-attack-target))
   }
 }
@@ -1659,8 +1661,8 @@
   :class :warrior
   :cost 4
   :spell #(if (<= (hero-health %) 12)
-    (target [:character] (damage-target 6))
-    (target [:character] (damage-target 4)))
+    (target [] (damage-target 6))
+    (target [] (damage-target 4)))
 }
 {
   :id 420
@@ -1696,8 +1698,8 @@
     :attack 2
     :durability 2
     :battlecry (combo
-      (target [:character] (damage-target 1))
-      (target [:character] (damage-target 2)))
+      (target [] (damage-target 1))
+      (target [] (damage-target 2)))
   }
 }
 {
@@ -1739,7 +1741,7 @@
   :quality :rare
   :class :druid
   :cost 1
-  :spell (target [:character]
+  :spell (target []
     #((damage-target (hero-attack %)) %))
 }
 {
@@ -1795,7 +1797,7 @@
   :minion {
     :attack 3
     :health 3
-    :combo (target [:character] (damage-target 2))
+    :combo (target [] (damage-target 2))
   }
 }
 {
@@ -2001,7 +2003,7 @@
   :quality :common
   :class :druid
   :cost 0
-  :spell (target [:character] (restore-health 5))
+  :spell (target [] (restore-health 5))
 }
 {
   :id 517
@@ -2409,7 +2411,7 @@
   :minion {
     :attack 3
     :health 3
-    :battlecry (target [:character] (restore-health 3))
+    :battlecry (target [] (restore-health 3))
   }
 }
 {
@@ -2429,7 +2431,7 @@
   :quality :common
   :class :rogue
   :cost 2
-  :spell (target [:character] (combo (damage-target 2) (damage-target 4)))
+  :spell (target [] (combo (damage-target 2) (damage-target 4)))
 }
 {
   :id 344
@@ -2438,7 +2440,7 @@
   :class :hunter
   :cost 2
   :secret {
-    :when-my-hero-attacked (target-all [:opponent :character] (damage-target 2))
+    :when-my-hero-attacked (target-all [:opponent] (damage-target 2))
   }
 }
 {
@@ -2592,7 +2594,7 @@
   :quality :common
   :class :mage
   :cost 1
-  :spell (target [:character] #(if (:freeze (current-target %))
+  :spell (target [] #(if (:freeze (current-target %))
     (damage-target 4)
     (give-target :freeze)))
 }
@@ -2686,7 +2688,7 @@
   :class :shaman
   :cost 1
   :overload 1
-  :spell (target [:character] (damage-target 3))
+  :spell (target [] (damage-target 3))
 }
 {
   :id 192
@@ -2721,7 +2723,7 @@
   :minion {
     :attack 3
     :health 2
-    :battlecry (apply comp (repeat 3 (target-random [:character {:not :self}]
+    :battlecry (apply comp (repeat 3 (target-random [{:not :self}]
       (damage-target 1))))
   }
 }
@@ -2768,7 +2770,7 @@
   :quality :common
   :class :priest
   :cost 2
-  :hero-power (target [:character] (damage-target 3))
+  :hero-power (target [] (damage-target 3))
 }
 {
   :id 70
@@ -2776,7 +2778,7 @@
   :quality :common
   :class :priest
   :cost 2
-  :hero-power (target [:character] (damage-target 2))
+  :hero-power (target [] (damage-target 2))
 }
 {
   :id 569
@@ -2805,7 +2807,7 @@
   :quality :common
   :class :druid
   :cost 0
-  :spell (target [:character] (damage-target 2))
+  :spell (target [] (damage-target 2))
 }
 {
   :id 154
@@ -3537,7 +3539,7 @@
   :quality :free
   :collectible false
   :cost 1
-  :spell (target [:character] (damage-target 2))
+  :spell (target [] (damage-target 2))
 }
 {
   :id 29
@@ -3687,7 +3689,7 @@
   :minion {
     :attack 4
     :health 5
-    :battlecry (target-all [:my :character] (restore-health 2))
+    :battlecry (target-all [:my] (restore-health 2))
   }
 }
 {
@@ -3707,5 +3709,1923 @@
     ] (-> % (set-target {
       :max-health new-max-health
       :health doubled-health}))))
+}
+{
+  :id 472
+  :name "Dragonling Mechanic"
+  :quality :free
+  :cost 4
+  :minion {
+    :attack 2
+    :health 4
+    :battlecry (summon-minion "Mechanical Dragonling")
+  }
+}
+{
+  :id 36
+  :name "Dread Infernal"
+  :quality :free
+  :class :warlock
+  :cost 6
+  :minion {
+    :attack 6
+    :health 6
+    :type :demon
+    :battlecry (target-all [{:not :self}]
+      (damage-target 1))
+  }
+}
+{
+  :id 599
+  :name "Dual Warglaives"
+  :quality :free
+  :cost 6
+  :weapon {
+    :attack 4
+    :durability 2
+  }
+}
+{
+  :id 356
+  :name "Elven Archer"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :battlecry (target [] (damage-target 1))
+  }
+}
+{
+  :id 240
+  :name "Emboldener 3000"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 0
+    :health 4
+    :end-of-my-turn (target-random [:minion] (buff-target 1 1))
+  }
+}
+{
+  :id 378
+  :name "Fan of Knives"
+  :quality :free
+  :class :rogue
+  :cost 3
+  :spell #(-> %
+    (target-all [:opponent :minion] (damage-target 1))
+    (draw-cards 1))
+}
+{
+  :id 636
+  :name "Fire Elemental"
+  :quality :free
+  :class :shaman
+  :cost 6
+  :minion {
+    :attack 6
+    :health 5
+    :battlecry (target [] (damage-target 3))
+  }
+}
+{
+  :id 622
+  :name "Flame Burst"
+  :quality :free
+  :cost 3
+  :spell (apply comp (repeat 5 (target-random [:opponent] (damage-target 1))))
+}
+{
+  :id 455
+  :name "Flame of Azzinoth"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+  }
+}
+{
+  :id 44
+  :name "Flamestrike"
+  :quality :free
+  :class :mage
+  :cost 7
+  :spell (target-all [:opponent :minion] (damage-target 4))
+}
+{
+  :id 390
+  :name "Flametongue Totem"
+  :quality :free
+  :class :shaman
+  :cost 2
+  :minion {
+    :attack 0
+    :health 3
+    :type :totem
+    :aura {:filter :adjacent :attack (partial + 2)}
+  }
+}
+{
+  :id 115
+  :name "Frog"
+  :quality :free
+  :cost 0
+  :minion {
+    :attack 0
+    :health 1
+    :type :beast
+    :properties [:taunt]
+  }
+}
+{
+  :id 49
+  :name "Frost Nova"
+  :quality :free
+  :class :mage
+  :cost 3
+  :spell (target-all [:opponent :minion] (give-target :freeze))
+}
+{
+  :id 177
+  :name "Frostbolt"
+  :quality :free
+  :class :mage
+  :cost 2
+  :spell (target [] #(-> % (damage-target 3) (give-target :freeze)))
+}
+{
+  :id 663
+  :name "Frostwolf Grunt"
+  :quality :free
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :properties [:taunt]
+  }
+}
+{
+  :id 604
+  :name "Frostwolf Warlord"
+  :quality :free
+  :cost 5
+  :minion {
+    :attack 4
+    :health 4
+    :battlecry #(let [n (count (filter-all % [:my :minion]))]
+      (-> % (buff-self n n)))
+  }
+}
+{
+  :id 381
+  :name "Gnoll"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 246
+  :name "Gnomish Inventor"
+  :quality :free
+  :cost 4
+  :minion {
+    :attack 2
+    :health 4
+    :battlecry (draw-cards 1)
+  }
+}
+{
+  :id 564
+  :name "Goldshire Footman"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 2
+    :properties [:taunt]
+  }
+}
+{
+  :id 510
+  :name "Grimscale Oracle"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :murloc
+    :aura {:filter :murloc :attack inc}
+  }
+}
+{
+  :id 283
+  :name "Guardian of Kings"
+  :quality :free
+  :class :paladin
+  :cost 7
+  :minion {
+    :attack 5
+    :health 6
+    :battlecry (target [:my :hero] (restore-health 6))
+  }
+}
+{
+  :id 624
+  :name "Gurubashi Berserker"
+  :quality :free
+  :cost 5
+  :minion {
+    :attack 2
+    :health 7
+    :when-minion-damaged (buff-self 3 0)
+  }
+}
+{
+  :id 470
+  :name "Hemet Nesingwary"
+  :quality :free
+  :hero {
+    :hero-power "Shotgun Blast"
+    :max-health 20
+  }
+}
+{
+  :id 387
+  :name "Hidden Gnome"
+  :quality :free
+  :cost 2
+  :minion { ; Was hiding in a barrel! (King Mukla)
+    :attack 1
+    :health 3
+  }
+}
+{
+  :id 490
+  :name "Hogger"
+  :quality :free
+  :hero {
+    :max-health 10
+  }
+}
+{
+  :id 443
+  :name "Hogger SMASH!"
+  :quality :free
+  :cost 3
+  :spell (target [] (damage-target 4))
+}
+{
+  :id 671
+  :name "Holy Nova"
+  :quality :free
+  :class :priest
+  :cost 5
+  :spell #(-> % (target-all [:opponent] (damage-target 2))
+    (target-all [:my] (restore-health 2)))
+}
+{
+  :id 423
+  :name "Homing Chicken"
+  :quality :free
+  :cost 1
+  :minion {
+    :attack 0
+    :health 1
+    :start-of-my-turn #(-> % (destroy-self) (draw-cards 3))
+  }
+}
+{
+  :id 369
+  :name "Huffer"
+  :quality :free
+  :class :hunter
+  :cost 3
+  :minion {
+    :attack 4
+    :health 2
+    :type :beast
+    :properties :charge
+  }
+}
+{
+  :id 189
+  :name "Humility"
+  :quality :free
+  :class :paladin
+  :cost 1
+  :spell (target [:minion] (set-target {:attack 1}))
+}
+{
+  :id 22
+  :name "Hunter's Mark"
+  :quality :free
+  :class :hunter
+  :cost 0
+  :spell (target [:minion] (set-target {:health 1 :max-health 1}))
+}
+{
+  :id 238
+  :name "Ironbark Protector"
+  :quality :free
+  :class :druid
+  :cost 8
+  :minion {
+    :attack 8
+    :health 8
+    :properties [:taunt]
+  }
+}
+{
+  :id 41
+  :name "Ironforge Rifleman"
+  :quality :free
+  :cost 3
+  :minion {
+    :attack 2
+    :health 2
+    :battlecry (target [] (damage-target 1))
+  }
+}
+; todo: change above the :rarity/:set
+{
+  :id 519
+  :name "Ironfur Grizzly"
+  :quality :common
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 3
+    :health 3
+    :type :beast
+    :properties [:taunt]
+  }
+}
+{
+  :id 139
+  :name "Jaina Proudmoore"
+  :quality :common
+  :set :missions
+  :class :mage
+  :cost 0
+  :hero {
+    :max-health 27
+  }
+}
+{
+  :id 488
+  :name "Kill Command"
+  :quality :common
+  :set :basic
+  :class :hunter
+  :cost 3
+  :spell (target [] #(if (> (count (filter-all % [:my :beast])) 0)
+    (-> % (damage-target 5))
+    (-> % (damage-target 3))))
+}
+{
+  :id 444
+  :name "King Mukla"
+  :quality :common
+  :set :missions
+  :cost 0
+  :hero {
+    :max-health 26
+  }
+}
+{
+  :id 479
+  :name "Kobold Geomancer"
+  :quality :common
+  :set :basic
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+    :spell-damage 1
+  }
+}
+{
+  :id 130
+  :name "Kor'kron Elite"
+  :quality :common
+  :set :basic
+  :class :warrior
+  :cost 4
+  :minion {
+    :attack 4
+    :health 3
+    :properties [:charge]
+  }
+}
+{
+  :id 441
+  :name "Legacy of the Emperor"
+  :quality :common
+  :set :missions
+  :cost 3
+  :spell (target-all [:my :minion] (buff-target 2 2))
+}
+{
+  :id 32
+  :name "Leokk"
+  :quality :common
+  :set :basic
+  :class :hunter
+  :cost 3
+  :minion {
+    :attack 2
+    :health 4
+    :aura {:filter [:my :minion] :attack inc}
+  }
+}
+{
+  :id 414
+  :name "Lord of the Arena"
+  :quality :common
+  :set :basic
+  :cost 6
+  :minion {
+    :attack 6
+    :health 5
+    :properties [:taunt]
+  }
+}
+{
+  :id 137
+  :name "Massive Gnoll"
+  :quality :common
+  :set :missions
+  :cost 4
+  :minion {
+    :attack 5
+    :health 2
+  }
+}
+{
+  :id 680
+  :name "Mechanical Dragonling"
+  :quality :common
+  :set :basic
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+  }
+}
+{
+  :id 592
+  :name "Metamorphosis"
+  :quality :common
+  :set :missions
+  :cost 6
+  :spell (do-something-crazy) ; Illidan Tutorial
+}
+{
+  :id 330
+  :name "Millhouse Manastorm"
+  :quality :common
+  :set :missions
+  :class :mage
+  :cost 0
+  :hero {
+    :max-health 20
+  }
+}
+{
+  :id 401
+  :name "Mind Control"
+  :quality :common
+  :set :basic
+  :class :priest
+  :cost 10
+  :spell (target [:opponent :minion] (mind-control-target))
+}
+{
+  :id 438
+  :name "Mind Vision"
+  :quality :common
+  :set :basic
+  :class :priest
+  :cost 1
+  :spell (target-random [:opponent :drawn]
+    #(-> % (give-card (:id (current-target %)))))
+}
+{
+  :id 30
+  :name "Mirror Image"
+  :quality :common
+  :set :basic
+  :class :mage
+  :cost 1
+  :spell (summon-minion [650 650])
+}
+{
+  :id 650
+  :name "Mirror Image"
+  :quality :common
+  :set :basic
+  :class :mage
+  :cost 0
+  :minion {
+    :attack 0
+    :health 2
+    :properties [:taunt]
+  }
+}
+{
+  :id 593
+  :name "Misha"
+  :quality :common
+  :set :basic
+  :class :hunter
+  :cost 3
+  :minion {
+    :attack 4
+    :health 4
+    :type :beast
+    :properties [:taunt]
+  }
+}
+{
+  :id 619
+  :name "Moonfire"
+  :quality :common
+  :set :basic
+  :class :druid
+  :cost 0
+  :spell (target [] (damage-target 1))
+}
+{
+  :id 43
+  :name "Mortal Coil"
+  :quality :common
+  :set :basic
+  :class :warlock
+  :cost 1
+  :spell (target [:minion] #(-> %
+    (damage-target 1)
+    (draw-cards (if (is-dead (current-target %)) 1 0))))
+}
+{
+  :id 404
+  :name "Mukla's Big Brother"
+  :quality :common
+  :set :missions
+  :cost 6
+  :minion {
+    :attack 10
+    :health 10
+  }
+}
+{
+  :id 486
+  :name "Murloc Scout"
+  :quality :common
+  :set :basic
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+    :type :murloc
+  }
+}
+{
+  :id 357
+  :name "Murloc Tidehunter"
+  :quality :common
+  :set :basic
+  :cost 2
+  :minion {
+    :attack 2
+    :health 1
+    :type :murloc
+    :battlecry (summon-minion "Murloc Scout")
+  }
+}
+{
+  :id 16
+  :name "Naga Myrmidon"
+  :quality :common
+  :set :missions
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 659
+  :name "Ogre Magi"
+  :quality :common
+  :set :basic
+  :cost 4
+  :minion {
+    :attack 4
+    :health 4
+    :spell-damage 1
+  }
+}
+{
+  :id 399
+  :name "Pandaren Scout"
+  :quality :common
+  :set :missions
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 405
+  :name "Poultryizer"
+  :quality :common
+  :set :debug
+  :cost 1
+  :minion {
+    :attack 0
+    :health 3
+    :start-of-my-turn (target-random [:minion {:not :self}]
+      (polymorph-target "Chicken"))
+  }
+}
+{
+  :id 47
+  :name "Razorfen Hunter"
+  :quality :common
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :battlecry (summon-minion "Boar")
+  }
+}
+{
+  :id 439
+  :name "Repair Bot"
+  :quality :common
+  :set :debug
+  :cost 1
+  :minion {
+    :attack 0
+    :health 3
+    :end-of-my-turn (target-random [:damaged]
+      (restore-health 6))
+  }
+}
+{
+  :id 678
+  :name "Riverpaw Gnoll"
+  :quality :common
+  :set :missions
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+  }
+}
+{
+  :id 348
+  :name "Sacrificial Pact"
+  :quality :common
+  :set :basic
+  :class :warlock
+  :cost 0
+  :spell (target [:demon] #(-> %
+    (destroy-target)
+    (target [:my :hero] (restore-health 5))))
+}
+{
+  :id 329
+  :name "Savage Roar"
+  :quality :common
+  :set :basic
+  :class :druid
+  :cost 3
+  :spell (target-all [:my] (give-target {:attack-this-turn 2}))
+}
+{
+  :id 288
+  :name "Shado-Pan Monk"
+  :quality :common
+  :set :missions
+  :cost 2
+  :minion {
+    :attack 2
+    :health 2
+  }
+}
+{
+  :id 547
+  :name "Shadow Word: Death"
+  :quality :common
+  :set :basic
+  :class :priest
+  :cost 3
+  :spell (target [:minion #(>= (:attack %) 5)] (destroy-target))
+}
+{
+  :id 434
+  :name "Shattered Sun Cleric"
+  :quality :common
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 3
+    :health 2
+    :battlecry (target [:my :minion] (buff-target 1 1))
+  }
+}
+{
+  :id 218
+  :name "Sheep"
+  :quality :common
+  :set :basic
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+  }
+}
+{
+  :id 493
+  :name "Shield Block"
+  :quality :common
+  :set :basic
+  :class :warrior
+  :cost 3
+  :spell (target [:my :hero] #(-> %
+    (give-target {:armor 5})
+    (draw-cards 1)))
+}
+{
+  :id 164
+  :name "Shiv"
+  :quality :common
+  :set :basic
+  :class :rogue
+  :cost 2
+  :spell (target [] #(-> %
+    (damage-target 1)
+    (draw-cards 1)))
+}
+{
+  :id 580
+  :name "Shotgun Blast"
+  :quality :common
+  :set :missions
+  :class :hunter
+  :cost 2
+  :hero-power (target [] (damage-target 1))
+}
+{
+  :id 611
+  :name "Silverback Patriarch"
+  :quality :common
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 1
+    :health 4
+    :properties [:taunt]
+  }
+}
+; {
+;   :id 313
+;   :name "Skeleton"
+;   :quality :common
+;   :set :basic
+;   :cost 1
+;   :minion {
+;     :attack 1
+;     :health 1
+;   }
+; }
+{
+  :id 529
+  :name "Soulfire"
+  :quality :common
+  :set :basic
+  :class :warlock
+  :cost 0
+  :spell (target [] #(-> %
+    (damage-target 4)
+    (target-random [:my :drawn] (destroy-target))))
+}
+{
+  :id 90
+  :name "Sprint"
+  :quality :common
+  :set :basic
+  :class :rogue
+  :cost 7
+  :spell (draw-cards 4)
+}
+{
+  :id 667
+  :name "Starfire"
+  :quality :common
+  :set :basic
+  :class :druid
+  :cost 6
+  :spell (target [] #(-> % (damage-target 5) (draw-cards 1)))
+}
+{
+  :id 101
+  :name "Starving Buzzard"
+  :quality :common
+  :set :basic
+  :class :hunter
+  :cost 2
+  :minion {
+    :attack 2
+    :health 1
+    :type :beast
+    :when-my-minion-summoned #(if (:beast (current-target %))
+      (draw-cards 1))
+  }
+}
+{
+  :id 105
+  :name "Stomp"
+  :quality :common
+  :set :missions
+  :cost 2
+  :spell (target-all [:opponent] (damage-target 2))
+}
+{
+  :id 325
+  :name "Stormpike Commando"
+  :quality :common
+  :set :basic
+  :cost 5
+  :minion {
+    :attack 4
+    :health 2
+    :battlecry (target [] (damage-target 2))
+  }
+}
+{
+  :id 310
+  :name "Stormwind Champion"
+  :quality :common
+  :set :basic
+  :cost 7
+  :minion {
+    :attack 6
+    :health 6
+    :aura {:filter [:my :minion] :attack inc :health inc}
+  }
+}
+{
+  :id 603
+  :name "Stormwind Knight"
+  :quality :common
+  :set :basic
+  :cost 4
+  :minion {
+    :attack 2
+    :health 5
+    :properties [:charge]
+  }
+}
+{
+  :id 620
+  :name "Swipe"
+  :quality :common
+  :set :basic
+  :class :druid
+  :cost 4
+  :spell (target [:opponent] #(-> %
+    (damage-target 4)
+    (target-all [:adjacent-to-target] (damage-target 1))))
+}
+{
+  :id 367
+  :name "Totemic Might"
+  :quality :common
+  :set :basic
+  :class :shaman
+  :cost 0
+  :spell (target-all [:my :totem] (buff-target 0 2))
+}
+{
+  :id 299
+  :name "Transcendence"
+  :quality :common
+  :set :missions
+  :cost 1
+  :spell (do-nothing) ; Yeah, no.
+}
+{
+  :id 293
+  :name "Truesilver Champion"
+  :quality :common
+  :set :basic
+  :class :paladin
+  :cost 4
+  :weapon {
+    :attack 4
+    :durability 2
+    :when-my-hero-attacks (target [:my :hero] (restore-health 2))
+  }
+}
+{
+  :id 162
+  :name "Tundra Rhino"
+  :quality :common
+  :set :basic
+  :class :hunter
+  :cost 5
+  :minion {
+    :attack 2
+    :health 5
+    :type :beast
+    :aura {:filter [:my :beast] :charge true}
+  }
+}
+{
+  :id 658
+  :name "Vanish"
+  :quality :common
+  :set :basic
+  :class :rogue
+  :cost 6
+  :spell (target-all [:minion] (return-target))
+}
+{
+  :id 323
+  :name "War Golem"
+  :quality :common
+  :set :basic
+  :cost 7
+  :minion {
+    :attack 7
+    :health 7
+  }
+}
+{
+  :id 494
+  :name "Warglaive of Azzinoth"
+  :quality :common
+  :set :missions
+  :cost 2
+  :weapon {
+    :attack 2
+    :durability 2
+  }
+}
+{
+  :id 274
+  :name "Water Elemental"
+  :quality :common
+  :set :basic
+  :class :mage
+  :cost 4
+  :minion {
+    :attack 3
+    :health 6
+    :when-minion-attacks (give-target :freeze)
+  }
+}
+{
+  :id 161
+  :name "Whirlwind"
+  :quality :common
+  :set :basic
+  :class :warrior
+  :cost 1
+  :spell (target-all [:minion] (damage-target 1))
+}
+{
+  :id 586
+  :name "Will of Mukla"
+  :quality :common
+  :set :missions
+  :cost 3
+  :spell (target [] (restore-health 8))
+}
+{
+  :id 151
+  :name "Windspeaker"
+  :quality :common
+  :set :basic
+  :class :shaman
+  :cost 4
+  :minion {
+    :attack 3
+    :health 3
+    :battlecry (target [:my :minion] (give-target :windfury))
+  }
+}
+{
+  :id 216
+  :name "Ancestral Healing"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 0
+  :spell (target [:minion] #(->
+    (restore-health (:max-health (current-target %)))
+    (give-target :taunt)))
+}
+{
+  :id 110
+  :name "Anduin Wrynn"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Lesser Heal"
+  }
+}
+{
+  :id 56
+  :name "Arcane Explosion"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 2
+  :spell (target-all [:opponent :minion] (damage-target 1))
+}
+{
+  :id 489
+  :name "Arcane Intellect"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 3
+  :spell (draw-cards 2)
+}
+{
+  :id 589
+  :name "Arcane Missiles"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 1
+  :spell (apply comp (repeat 3 (target-random [:opponent] (damage-target 1))))
+}
+{
+  :id 167
+  :name "Arcane Shot"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 1
+  :spell (target [] (damage-target 2))
+}
+{
+  :id 253
+  :name "Armor Up!"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 2
+  :hero-power (target [:my :hero] (give-target {:armor 2}))
+}
+{
+  :id 568
+  :name "Assassinate"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 5
+  :spell (target [:opponent :minion] (destroy-target))
+}
+{
+  :id 666
+  :name "Avatar of the Coin"
+  :collectible false
+  :quality :free
+  :set :basic
+  :cost 0
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 471
+  :name "Backstab"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 0
+  :spell (target [{:not :damaged} :minion] (damage-target 2))
+}
+{
+  :id 394
+  :name "Blessing of Might"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 1
+  :spell (target [:minion] (buff-target 3 0))
+}
+{
+  :id 576
+  :name "Bloodfen Raptor"
+  :quality :free
+  :set :basic
+  :cost 2
+  :minion {
+    :attack 3
+    :health 2
+    :type :beast
+  }
+}
+{
+  :id 60
+  :name "Boulderfist Ogre"
+  :quality :free
+  :set :basic
+  :cost 6
+  :minion {
+    :attack 6
+    :health 7
+  }
+}
+{
+  :id 646
+  :name "Charge"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 0
+  :spell (target [:my :minion] (give-target :charge))
+}
+{
+  :id 532
+  :name "Claw"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 1
+  :spell (target [:my :hero] (give-target {:armor 2 :attack-this-turn 2}))
+}
+{
+  :id 201
+  :name "Dagger Mastery"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 2
+  :hero-power (equip-weapon "Wicked Knife")
+}
+{
+  :id 87
+  :name "Deadly Poison"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 1
+  :spell (target [:my :weapon] (buff-target 2 0))
+}
+{
+  :id 332
+  :name "Drain Life"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 3
+  :spell (target [] #(-> %
+    (damage-target 2)
+    (target [:my :hero] (restore-health 2))))
+}
+{
+  :id 227
+  :name "Execute"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 1
+  :spell (target [:damaged :opponent :minion] (destroy-target))
+}
+{
+  :id 632
+  :name "Fiery War Axe"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 2
+  :weapon {
+    :attack 3
+    :durability 2
+  }
+}
+{
+  :id 522
+  :name "Fireball"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 4
+  :spell (target [] (damage-target 6))
+}
+{
+  :id 677
+  :name "Fireblast"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 2
+  :hero-power (target [] (damage-target 1))
+}
+{
+  :id 233
+  :name "Frost Shock"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :spell (target [:opponent] #(-> %
+    (damage-target 1)
+    (give-target :freeze)))
+}
+{
+  :id 635
+  :name "Garrosh Hellscream"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Armor Up!"
+  }
+}
+{
+  :id 618
+  :name "Gul'dan"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Life Tap"
+  }
+}
+{
+  :id 350
+  :name "Hammer of Wrath"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 4
+  :spell (target [] #(-> % (damage-target 3) (draw-cards 1)))
+}
+{
+  :id 499
+  :name "Hand of Protection"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 1
+  :spell (target [:minion] (give-target :divine-shield))
+}
+{
+  :id 275
+  :name "Healing Totem"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :minion {
+    :attack 0
+    :health 2
+    :type :totem
+    :end-of-my-turn (target-all [:my :minion] (restore-health 1))
+  }
+}
+{
+  :id 258
+  :name "Healing Touch"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 3
+  :spell (target [] (restore-health 8))
+}
+{
+  :id 122
+  :name "Hellfire"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 4
+  :spell (target-all [] (damage-target 3))
+}
+{
+  :id 1
+  :name "Heroic Strike"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 2
+  :spell (target [:my :hero] (give-target {:attack-this-turn 4}))
+}
+{
+  :id 270
+  :name "Hex"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 3
+  :spell (target [:minion] (polymorph-target "Frog"))
+}
+{
+  :id 108
+  :name "Holy Light"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 2
+  :spell (target [] (restore-health 6))
+}
+{
+  :id 409
+  :name "Holy Smite"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 1
+  :spell (target [] (damage-target 2))
+}
+{
+  :id 225
+  :name "Houndmaster"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 4
+  :minion {
+    :attack 4
+    :health 3
+    :battlecry (target [:my :beast]
+      (give-target {:health 2 :attack 2 :taunt true}))
+  }
+}
+{
+  :id 548
+  :name "Innervate"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 0
+  :spell (target [:my :hero] (give-target {:mana 2}))
+}
+{
+  :id 320
+  :name "Jaina Proudmoore"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Fireblast"
+  }
+}
+{
+  :id 126
+  :name "Lesser Heal"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 2
+  :hero-power (target [] (restore-health 2))
+}
+{
+  :id 20
+  :name "Life Tap"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 2
+  :hero-power (target [:my :hero] #(-> (damage-target 2) (draw-cards 1)))
+}
+{
+  :id 250
+  :name "Light's Justice"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 1
+  :weapon {
+    :attack 1
+    :durability 4
+  }
+}
+{
+  :id 362
+  :name "Magma Rager"
+  :quality :free
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 5
+    :health 1
+  }
+}
+{
+  :id 621
+  :name "Malfurion Stormrage"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Shapeshift"
+  }
+}
+{
+  :id 480
+  :name "Mark of the Wild"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 2
+  :spell (target [:minion] (give-target {:attack 2 :health 2 :taunt true}))
+}
+{
+  :id 415
+  :name "Mind Blast"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 2
+  :spell (target [:opponent :hero] (damage-target 5))
+}
+{
+  :id 407
+  :name "Multi-Shot"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 4
+  :spell (target-random [2 :opponent :minion] (damage-target 3))
+}
+{
+  :id 55
+  :name "Murloc Raider"
+  :quality :free
+  :set :basic
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :type :murloc
+  }
+}
+{
+  :id 184
+  :name "Nightblade"
+  :quality :free
+  :set :basic
+  :cost 5
+  :minion {
+    :attack 4
+    :health 4
+    :battlecry (target [:opponent :hero] (damage-target 3))
+  }
+}
+{
+  :id 600
+  :name "Northshire Cleric"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 1
+  :minion {
+    :attack 1
+    :health 3
+    :when-minion-healed (draw-cards 1)
+  }
+}
+{
+  :id 435
+  :name "Novice Engineer"
+  :quality :free
+  :set :basic
+  :cost 2
+  :minion {
+    :attack 1
+    :health 2
+    :battlecry (draw-cards 1)
+  }
+}
+{
+  :id 15
+  :name "Oasis Snapjaw"
+  :quality :free
+  :set :basic
+  :cost 4
+  :minion {
+    :attack 2
+    :health 7
+    :type :beast
+  }
+}
+{
+  :id 595
+  :name "Polymorph"
+  :quality :free
+  :set :basic
+  :class :mage
+  :cost 4
+  :spell (target [:minion] (polymorph-target "Sheep"))
+}
+{
+  :id 431
+  :name "Power Word: Shield"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 1
+  :spell (target [:minion] #(-> (buff-target 0 2) (draw-cards 1)))
+}
+{
+  :id 502
+  :name "Raid Leader"
+  :quality :free
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 2
+    :health 2
+    :aura {:filter [:my :minion] :attack inc}
+  }
+}
+{
+  :id 560
+  :name "Reckless Rocketeer"
+  :quality :free
+  :set :basic
+  :cost 6
+  :minion {
+    :attack 5
+    :health 2
+    :properties [:charge]
+  }
+}
+{
+  :id 248
+  :name "Reinforce"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 2
+  :hero-power (summon-minion "Silver Hand Recruit")
+}
+{
+  :id 484
+  :name "Rexxar"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Steady Shot"
+  }
+}
+{
+  :id 535
+  :name "River Crocolisk"
+  :quality :free
+  :set :basic
+  :cost 2
+  :minion {
+    :attack 2
+    :health 3
+    :type :beast
+  }
+}
+{
+  :id 491
+  :name "Rockbiter Weapon"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :spell (target [:my] (give-target {:attack-this-turn 3}))
+}
+{
+  :id 385
+  :name "Sap"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 2
+  :spell (target [:opponent :minion] (return-target))
+}
+{
+  :id 98
+  :name "Searing Totem"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :totem
+  }
+}
+{
+  :id 326
+  :name "Sen'jin Shieldmasta"
+  :quality :free
+  :set :basic
+  :cost 4
+  :minion {
+    :attack 3
+    :health 5
+    :properties [:taunt]
+  }
+}
+{
+  :id 647
+  :name "Shadow Bolt"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 3
+  :spell (target [:minion] (damage-target 4))
+}
+{
+  :id 315
+  :name "Shadow Word: Pain"
+  :quality :free
+  :set :basic
+  :class :priest
+  :cost 2
+  :spell (target [:minion #(<= (:attack %) 3)] (destroy-target))
+}
+{
+  :id 185
+  :name "Shapeshift"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 2
+  :hero-power (target [:my :hero] (give-target {:armor 1 :attack-this-turn 1}))
+}
+{
+  :id 268
+  :name "Silver Hand Recruit"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+  }
+}
+{
+  :id 205
+  :name "Sinister Strike"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 1
+  :spell (target [:opponent :hero] (damage-target 3))
+}
+{
+  :id 481
+  :name "Steady Shot"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 2
+  :hero-power (target [:opponent :hero] (damage-target 2))
+}
+{
+  :id 298
+  :name "Stoneclaw Totem"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :minion {
+    :attack 0
+    :health 2
+    :type :totem
+    :properties [:taunt]
+  }
+}
+{
+  :id 76
+  :name "Stonetusk Boar"
+  :quality :free
+  :set :basic
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+    :properties [:charge]
+  }
+}
+{
+  :id 208
+  :name "Succubus"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 2
+  :minion {
+    :attack 4
+    :health 3
+    :type :demon
+    :battlecry (target-random [:my :drawn] (destroy-target))
+  }
+}
+{
+  :id 319
+  :name "Thrall"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Totemic Call"
+  }
+}
+{
+  :id 86
+  :name "Timber Wolf"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 1
+  :minion {
+    :attack 1
+    :health 1
+    :type :beast
+    :aura {:filter [:my :beast] :attack inc}
+  }
+}
+{
+  :id 316
+  :name "Totemic Call"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 2
+  :hero-power #(let [
+    summonable-totems #{275 98 365 298}
+    current-totems (set (map :id (filter-all % [:my :totem])))
+    totems-not-summoned (difference summonable-totems current-totems)
+    ] (if (> (count (totems-not-summoned)) 0)
+      (-> % (summon-minion (rand-nth (seq totems-not-summoned))))))
+  ; todo: remember nil state signals an invalid path
+}
+{
+  :id 163
+  :name "Tracking"
+  :quality :free
+  :set :basic
+  :class :hunter
+  :cost 1
+  ; :first 3 here pulls first of the filter's seq 3 times
+  :spell (target [:my :undrawn {:first 3}]
+    #(-> %
+      (draw-target) ; draw the choice
+      (target-all [:my :undrawn {:first 2}]
+        (destroy-target)))) ; destroy the rest
+}
+{
+  :id 257
+  :name "Uther Lightbringer"
+  :quality :free
+  :set :basic
+  :class :paladin
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Reinforce"
+  }
+}
+{
+  :id 2
+  :name "Valeera Sanguinar"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 0
+  :hero {
+    :max-health 30
+    :hero-power "Dagger Mastery"
+  }
+}
+{
+  :id 340
+  :name "Voidwalker"
+  :quality :free
+  :set :basic
+  :class :warlock
+  :cost 1
+  :minion {
+    :attack 1
+    :health 3
+    :type :demon
+    :properties [:taunt]
+  }
+}
+{
+  :id 410
+  :name "Voodoo Doctor"
+  :quality :free
+  :set :basic
+  :cost 1
+  :minion {
+    :attack 2
+    :health 1
+    :battlecry (target [] (restore-health 2))
+  }
+}
+{
+  :id 193
+  :name "Warsong Commander"
+  :quality :free
+  :set :basic
+  :class :warrior
+  :cost 3
+  :minion {
+    :attack 2
+    :health 3
+    :aura {:filter [:my :minion] :charge true}
+  }
+}
+{
+  :id 183
+  :name "Wicked Knife"
+  :quality :free
+  :set :basic
+  :class :rogue
+  :cost 1
+  :weapon {
+    :attack 1
+    :durability 2
+  }
+}
+{
+  :id 282
+  :name "Wild Growth"
+  :quality :free
+  :set :basic
+  :class :druid
+  :cost 2
+  :spell (target [:my :hero] (give-target {:mana-crystal 1}))
+}
+{
+  :id 146
+  :name "Windfury"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 2
+  :spell (target [:minion] (give-target :windfury))
+}
+{
+  :id 174
+  :name "Wolfrider"
+  :quality :free
+  :set :basic
+  :cost 3
+  :minion {
+    :attack 3
+    :health 1
+    :properties [:charge]
+  }
+}
+{
+  :id 365
+  :name "Wrath of Air Totem"
+  :quality :free
+  :set :basic
+  :class :shaman
+  :cost 1
+  :minion {
+    :attack 0
+    :health 2
+    :type :totem
+    :spell-damage 1
+  }
 }
 ])
