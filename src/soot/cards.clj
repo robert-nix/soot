@@ -1100,6 +1100,7 @@
   :class :mage
   :cost 3
   :secret {
+    ; before
     :when-opponent-spell-cast #(if
       (and (:minion (current-target %)) (is-friendly (current-target %)))
       (-> %
@@ -1506,7 +1507,7 @@
   :set :expert
   :class :paladin
   :cost 2
-  :spell (target-all :minion (set-target {:health 1}))
+  :spell (target-all [:minion] (set-target {:health 1}))
 }
 {
   :id 125
@@ -2170,6 +2171,7 @@
   :minion {
     :attack 3
     :health 2
+    ; after
     :when-my-spell-cast (target-all [:minion] (damage-target 1))
   }
 }
@@ -2343,6 +2345,7 @@
   :class :rogue
   :cost 2
   :spell (target [:opponent :minion]
+    ; todo: account for poison
     #(let [damage (:attack (current-target %))]
       ((target-all [:adjacent-to-target] (damage-target damage)) %)))
 }
@@ -4300,7 +4303,7 @@
   :minion {
     :attack 4
     :health 4
-    :battlecry #(let [n (count (filter-all % [:my :minion]))]
+    :battlecry #(let [n (count (filter-all % [:my :minion {:not :self}]))]
       (-> % (buff-self n n)))
   }
 }
