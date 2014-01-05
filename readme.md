@@ -65,13 +65,12 @@ etc.)
 - `(target filter expr)`; filter may be a single or a coll of keywords and/or
 functions.  functions are applied with the contextual target as the sole
 argument and should return a boolean (true include/false exclude).  colls are
-combined using logical and unless an :or keyword is present in the coll.  when
-filtering cards, cards are filtered for :state :played and :type :character
-unless an overriding keyword is provided.  an empty vector allows the default
-filtering.  this behavior belongs to filter-all. expr functions are applied with
-the state as the sole argument, and this state contains the target as a part of
-its context.  often for target, colls are used for single keywords just cause it
-looks nicer.
+combined using logical and.  when filtering cards, cards are filtered for :state
+:played and :character unless an overriding keyword is provided.  an empty
+vector allows the default filtering.  this behavior belongs to filter-all. expr
+functions are applied with the state as the sole argument, and this state
+contains the target as a part of its context.  often for target, colls are used
+for single keywords just cause it looks nicer.
 
 - `(target-random)`; while (target ...) will require input from the user if more
 than one viable target is found, (target-random ...) will choose randomly from

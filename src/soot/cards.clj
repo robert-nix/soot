@@ -230,7 +230,7 @@
   :minion {
     :attack 5
     :health 8
-    :battlecry (choose "Demigod's Favor" "Shan'do's Lesson")
+    :battlecry (choose-one "Demigod's Favor" "Shan'do's Lesson")
       ; (target-all [:my :minion] (buff-target 2 2))
       ; (summon-minion [181 181])) ; 181 = Taunt Treant
   }
@@ -654,7 +654,7 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose "Ancient Teachings" "Ancient Secrets")
+    :battlecry (choose-one "Ancient Teachings" "Ancient Secrets")
   }
 }
 {
@@ -667,7 +667,7 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose "Rooted" "Uproot")
+    :battlecry (choose-one "Rooted" "Uproot")
       ; (target :self #(-> % (give-target :taunt) (buff-target 0 5)))
       ; (buff-self 5 0))
   }
@@ -702,8 +702,7 @@
   :class :hunter
   :cost 1
   :spell (target :beast #(-> %
-    (buff-target 2 0)
-    (give-target :immune)))
+    (give-target {:immune true :attack-this-turn 2})))
 }
 {
   :id 73
@@ -889,10 +888,11 @@
   :class :mage
   :cost 3
   :secret {
-    :when-my-hero-damaged #(if (< (hero-health %) 1)
+    ; todo: make sure nil return cancels destroying the secret
+    :before-my-hero-damaged #(if
+      (> (:damage-taking %) (+ (hero-armor %) (hero-health %)))
       (-> %
-        (heal-hero (damage-taken %))
-        (give-hero :immune)))
+        (target [:my :hero] (give-target :immune))))
   }
 }
 {
@@ -1690,7 +1690,7 @@
   :minion {
     :attack 2
     :health 4
-    :battlecry (choose "Moonfire" "Dispel")
+    :battlecry (choose-one "Moonfire" "Dispel")
       ; (target [] (damage-target 2))
       ; (target [:minion] (silence-target)))
   }
@@ -1898,7 +1898,7 @@
   :set :expert
   :class :druid
   :cost 5
-  :spell (choose 485 58)
+  :spell (choose-one 485 58)
     ; (target [:my :hero] (give-target {:mana-crystal 2}))
     ; (draw-cards 3))
 }
@@ -2069,7 +2069,7 @@
   :set :expert
   :class :druid
   :cost 5
-  :spell (choose 195 653)
+  :spell (choose-one 195 653)
     ; (target [:minion] (damage-target 5))
     ; (target-all [:opponent :minion] (damage-target 2)))
 }
@@ -2630,7 +2630,7 @@
   :minion {
     :attack 4
     :health 4
-    :battlecry (choose "Cat Form" "Bear Form")
+    :battlecry (choose-one "Cat Form" "Bear Form")
   }
 }
 ; next two are polymorph results of Cat Form / Bear Form.  not sure how the
@@ -2738,8 +2738,8 @@
   :class :paladin
   :cost 1
   :secret {
-    :when-my-hero-damaged (target [:opponent :hero]
-      #((damage-target (damage-taken %)) %))
+    :after-my-hero-damaged (target [:opponent :hero]
+      #((damage-target (:damage-taken %)) %))
   }
 }
 {
@@ -2884,8 +2884,7 @@
   :class :mage
   :cost 3
   :secret {
-    ; todo: trigger this before the damage is calculated (rewrite ice block?)
-    :when-my-hero-attacked (target [:my :hero] (give-target {:armor 8}))
+    :before-my-hero-attacked (target [:my :hero] (give-target {:armor 8}))
   }
 }
 {
@@ -3070,7 +3069,7 @@
   :set :expert
   :class :druid
   :cost 3
-  :spell (choose 430 133)
+  :spell (choose-one 430 133)
 }
 {
   :id 430
@@ -3210,7 +3209,7 @@
   :set :expert
   :class :druid
   :cost 2
-  :spell (choose "Summon a Panther" "Leader of the Pack")
+  :spell (choose-one "Summon a Panther" "Leader of the Pack")
 }
 {
   :id 170
@@ -3800,7 +3799,7 @@
   :set :expert
   :class :druid
   :cost 2
-  :spell (choose 234 501)
+  :spell (choose-one 234 501)
 }
 {
   :id 234
@@ -5079,6 +5078,7 @@
   :weapon {
     :attack 4
     :durability 2
+    ; before
     :when-my-hero-attacks (target [:my :hero] (restore-health 2))
   }
 }
