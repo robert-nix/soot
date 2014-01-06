@@ -37,7 +37,7 @@
   :name "I Am Murloc"
   :quality :free
   :set :reward
-  :spell #((summon-minion (repeat (rand-nth [3 4 5]) 715)) %) ; 715 = 1/1 Murloc
+  :spell #(-> % (summon-minion (repeat (rand-nth [3 4 5]) 715))) ; 715 = 1/1 Murloc
 }
 {
   :id 223
@@ -47,7 +47,7 @@
   :class :hunter
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Flames of Azzinoth"
   }
 }
@@ -58,7 +58,7 @@
   :set :missions
   :cost 0
   :hero {
-    :max-health 25
+    :health 25
     :hero-power "Transcendence"
   }
 }
@@ -87,16 +87,16 @@
   :name "Power of the Horde"
   :quality :free
   :set :reward
-  :spell #((summon-minion (rand-nth ["Frostwolf Grunt" "Sen'jin Shieldmasta"
-    "Cairne Bloodhoof" "Tauren Warrior" "Thrallmar Farseer"
-    "Silvermoon Guardian"])) %)
+  :spell #(-> % (summon-minion (rand-nth ["Frostwolf Grunt"
+    "Sen'jin Shieldmasta" "Cairne Bloodhoof" "Tauren Warrior"
+    "Thrallmar Farseer" "Silvermoon Guardian"])))
 }
 {
   :id 716
   :name "Rogues Do It..."
   :quality :free
   :set :reward
-  :spell (target [] (-> % (damage-target 4) (draw-cards 1)))
+  :spell (target [] #(-> % (damage-target 4) (draw-cards 1)))
 }
 ; The Coin
 {
@@ -829,7 +829,7 @@
   :class :shaman
   :cost 3
   :spell (target-random [:my :undrawn] #(-> %
-    (give-target {:cost -3})
+    (give-target {:use-cost -3})
     (draw-target)))
 }
 {
@@ -925,7 +925,8 @@
   :class :priest
   :cost 4
   :spell (target-random [1 :opponent :undrawn :minion]
-    #(-> % (summon-minion (current-target %)))
+    ; this does indeed not trigger battlecries.  so no jaraxxus hero, e.g.
+    #(-> % (summon-minion (:id (current-target %))))
     (summon-minion "Shadow of Nothing"))
 }
 {
@@ -1076,7 +1077,7 @@
   :cost 2
   :secret {
     ; 512 = 1/1 Snake
-    :when-my-minion-attacked (comp (end-secret) (summon-minion (repeat 3 512)))
+    :when-my-minion-attacked (summon-minion (repeat 3 512))
   }
 }
 {
@@ -1192,7 +1193,7 @@
   :class :shaman
   :cost 2
   :spell (target [:minion]
-    (give-target {:deathrattle #((summon-minion (self %)) %)}))
+    (give-target {:deathrattle #((summon-minion % (:id (self %))))}))
 }
 {
   :id 176
@@ -1352,7 +1353,7 @@
     :attack 1
     :health 2
     :type :pirate
-    :battlecry (target [:opponent :weapon] (give-target {:durability -1}))
+    :battlecry (target [:opponent :weapon] (damage-target 1))
   }
 }
 {
@@ -1389,7 +1390,7 @@
   :class :warrior
   :cost 2
   :spell #(-> %
-    (target-all [:my :minion] (give-target {:minimum-health 1}))
+    (target-all [:my :minion] (set-target {:minimum-health-this-turn 1}))
     (draw-cards 1))
 }
 {
@@ -1531,9 +1532,9 @@
   :set :expert
   :class :hunter
   :cost 5
-  :spell (comp
-    (target-all :adjacent-to-target (damage-target 2))
-    (target [:minion] (damage-target 5)))
+  :spell #(-> %
+    (target [:minion] (damage-target 5))
+    (target-all [:adjacent-to-target] (damage-target 2)))
 }
 {
   :id 236
@@ -1887,7 +1888,7 @@
     :health 2
     :type :murloc
     :when-minion-summoned #(if
-      (= (:type (last-minion-summoned %)) :murloc)
+      (= (:type (last-summoned %)) :murloc)
       ((buff-self 1 0) %))
   }
 }
@@ -2359,7 +2360,7 @@
   :spell (target [:minion] (give-target {
     ; todo: make sure this draws the caster cards... i.e. draw-cards generates
     ; in the context of the targeter, not the target.
-    :when-minion-attacks (draw-cards 1)}))
+    :before-minion-attacks (draw-cards 1)}))
 }
 {
   :id 669
@@ -2825,7 +2826,7 @@
     ; todo: make sure this supplies attacker as the target
     :when-opponent-minion-attacks #(-> %
       (return-target)
-      (give-target {:cost 2}))
+      (give-target {:use-cost 2}))
   }
 }
 {
@@ -3115,7 +3116,8 @@
   :class :mage
   :cost 3
   :secret {
-    :when-opponent-minion-summoned #(-> % (summon-minion (current-target %)))
+    :when-opponent-minion-summoned #(-> %
+      (summon-minion (:id (current-target %))))
   }
 }
 {
@@ -3168,7 +3170,7 @@
   :secret {
     :when-opponent-minion-attacks #(-> %
       (summon-minion "Defender")
-      (target [:last-minion-summoned] (redirect-attack-target)))
+      (target [:last-summoned] (redirect-attack-target)))
   }
 }
 {
@@ -3264,9 +3266,9 @@
   :cost 1
   :secret {
     :when-my-minion-destroyed #(-> %
-      (summon-minion (current-target %))
-      ; todo: ensure the resurrectee isn't healable
-      (set-target {:health 1 :max-health 1}))
+      (summon-minion (:id (current-target %)))
+      ; resurectee is healable
+      (set-target {:health 1}))
   }
 }
 {
@@ -3336,7 +3338,7 @@
   :cost 0
   :spell (target [:my :minion] #(-> %
     (return-target)
-    (give-target {:cost -2})))
+    (give-target {:use-cost -2})))
 }
 {
   :id 159
@@ -3499,7 +3501,7 @@
   :minion {
     :attack 4
     :health 6
-    :enrage (target [:my :hero] (give-target {:weapon-bonus-attack 2}))
+    :enrage (target [:my :weapon] (buff-target 2 0))
   }
 }
 {
@@ -4386,7 +4388,7 @@
   :set :missions
   :hero {
     :hero-power "Shotgun Blast"
-    :max-health 20
+    :health 20
   }
 }
 {
@@ -4406,7 +4408,7 @@
   :quality :common
   :set :missions
   :hero {
-    :max-health 10
+    :health 10
   }
 }
 {
@@ -4517,7 +4519,7 @@
   :class :mage
   :cost 0
   :hero {
-    :max-health 27
+    :health 27
   }
 }
 {
@@ -4538,7 +4540,7 @@
   :set :missions
   :cost 0
   :hero {
-    :max-health 26
+    :health 26
   }
 }
 {
@@ -4637,7 +4639,7 @@
   :class :mage
   :cost 0
   :hero {
-    :max-health 20
+    :health 20
   }
 }
 {
@@ -5189,7 +5191,7 @@
   :class :priest
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Lesser Heal"
   }
 }
@@ -5405,7 +5407,7 @@
   :class :warrior
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Armor Up!"
   }
 }
@@ -5417,7 +5419,7 @@
   :class :warlock
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Life Tap"
   }
 }
@@ -5538,7 +5540,7 @@
   :class :mage
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Fireblast"
   }
 }
@@ -5558,7 +5560,7 @@
   :set :basic
   :class :warlock
   :cost 2
-  :hero-power (target [:my :hero] #(-> (damage-target 2) (draw-cards 1)))
+  :hero-power (target [:my :hero] #(-> % (damage-target 2) (draw-cards 1)))
 }
 {
   :id 250
@@ -5591,7 +5593,7 @@
   :class :druid
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Shapeshift"
   }
 }
@@ -5742,7 +5744,7 @@
   :class :hunter
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Steady Shot"
   }
 }
@@ -5907,7 +5909,7 @@
   :class :shaman
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Totemic Call"
   }
 }
@@ -5962,7 +5964,7 @@
   :class :paladin
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Reinforce"
   }
 }
@@ -5974,7 +5976,7 @@
   :class :rogue
   :cost 0
   :hero {
-    :max-health 30
+    :health 30
     :hero-power "Dagger Mastery"
   }
 }

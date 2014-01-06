@@ -4,6 +4,7 @@
   (:require [clojure.set :as set]
             [clojure.math.combinatorics :as combo]))
 
+; mockup of the ai primitive
 (defn choose
   "Branches between the supplied functions on state"
   [s fns labels]
