@@ -56,6 +56,7 @@
       (assoc-in [:damage-taking] n)
       (trigger-target :before-damaged)
       (set-target {:health new-health :armor new-armor})
+      ; todo: account for minimum-health
       (assoc-in [:damage-taken] n)
       (trigger-target :after-damaged)))))
 
@@ -128,6 +129,16 @@
         f
         pop-target)))
       (map :name choices))))
+
+(defn target-all
+  "Doesn't branch, but performs the composition of f for all targets to resolve
+  the game state"
+  ; kinda copy-paste but I don't care as much
+  [s filters f] (let [choices (filter-all s filters)]
+    ((apply comp (for [choice choices] (fn [s] (-> s
+        (push-target choice)
+        f
+        pop-target)))) s)))
 
 (defn tick-fatigue
   "Does a tick of fatigue on the current player"
@@ -250,6 +261,7 @@
 
 (defn give-target
   "Adds to the current target's stats"
+  ; todo: do correct :max-health updating with :health modifiers
   [s stats] (if (map? stats)
     (reduce #(%2 %1) s (map (fn
       [[stat value]] (fn [s]
@@ -260,3 +272,9 @@
             (#(% value (or v (%))) (give-target-map stat)))))))))
       stats))
     (give-target s {stats true})))
+
+(defn buff-target [s attack health]
+  (give-target s {:attack attack :health health}))
+
+(defn buff-weapon [s attack health]
+  (target s [:my :weapon] (buff-target attack health)))

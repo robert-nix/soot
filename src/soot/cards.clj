@@ -179,7 +179,7 @@
   :minion {
     :attack 7
     :health 5
-    :end-of-my-turn (damage-all 2)
+    :end-of-my-turn (target-all [{:not :self}] (damage-target 2))
   }
 }
 {
@@ -818,7 +818,7 @@
     :attack 3
     :health 3
     ; i.e. replace my minion slot's values with that of the target
-    :battlecry (target :minion (copy-target))
+    :battlecry (target :minion copy-target)
   }
 }
 {
@@ -1131,7 +1131,7 @@
   :weapon {
     :attack 1
     :durability 3
-    :when-my-minion-summoned (comp (buff-self 1 1) (buff-weapon 0 -1))
+    :when-my-minion-summoned (comp (buff-target 1 1) (buff-weapon 0 -1))
   }
 }
 {
@@ -1154,7 +1154,7 @@
     :attack 4
     :health 4
     :properties [:taunt]
-    :deathrattle (damage-all 2)
+    :deathrattle (target-all [] (damage-target 2))
   }
 }
 { ; todo: be certain swap-with-target works essentially like brewmaster + summon
@@ -1318,8 +1318,9 @@
   :class :rogue
   :cost 2
   :spell #(-> %
-    (destroy-my-weapon)
-    (damage-all (my-weapon-durability %)))
+    (target [:my :weapon] (destroy-target))
+    (target-all [:opponent]
+      (damage-target (actor-damage (first (filter-all % [:my :weapon]))))))
 }
 {
   :id 7
@@ -1522,7 +1523,7 @@
     :health 3
     :end-of-my-turn #(if
       (> (count (filter-all % [:my :secret :played])) 0)
-      ((buff-self 2 2) %))
+      (buff-self % 2 2) %)
   }
 }
 {
@@ -1889,7 +1890,7 @@
     :type :murloc
     :when-minion-summoned #(if
       (= (:type (last-summoned %)) :murloc)
-      ((buff-self 1 0) %))
+      (buff-self % 1 0) %)
   }
 }
 {
@@ -1939,7 +1940,7 @@
   :minion {
     :attack 2
     :health 2
-    :when-my-card-played (buff-self 1 1)
+    :after-my-card-played (buff-self 1 1)
   }
 }
 {
@@ -2108,7 +2109,7 @@
     :attack 4
     :health 1
     :type :dragon
-    :battlecry #(buff-self 0 (count (filter-all [:my :drawn])))
+    :battlecry #(buff-self % 0 (count (filter-all % [:my :drawn])))
   }
 }
 {
@@ -2119,8 +2120,8 @@
   :class :warrior
   :cost 1
   :spell (target [:my :hero] #(if (:weapon (current-target %))
-    ((buff-weapon 1 1) %)
-    ((equip-weapon "Heavy Axe") %)))
+    (buff-weapon % 1 1)
+    (equip-weapon % "Heavy Axe")))
 }
 {
   :id 160
@@ -2399,6 +2400,7 @@
     :attack 2
     :health 3
     :type :pirate
+    ; does not work with attack this turn, even on weapons! (e.g. heroic strike)
     :battlecry #(let [attack (or 0 (:attack (:weapon (my-hero %))))]
       (-> % (buff-self attack 0)))
   }
@@ -2636,7 +2638,7 @@
 }
 ; next two are polymorph results of Cat Form / Bear Form.  not sure how the
 ; spells should be implemented... interaction with spell copies e.g. lorewalker
-; cho versus interaction with minion copies e.g. faceless manipulator.  could be
+; cho versus interaction with minion copies e.g. mirror entity.  could be
 ; both
 {
   :id 408
