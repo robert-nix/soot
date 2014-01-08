@@ -261,7 +261,7 @@
     :attack 2
     :health 2
     ; todo: make this less shitty
-    :combo #((apply buff-self (repeat 2 (* 2 (cards-played-this-turn %)))) %)
+    :combo #((apply buff-self (repeat 2 (* 2 (:cards-played-this-turn %)))) %)
   }
 }
 {
@@ -864,7 +864,7 @@
   :weapon {
     :attack 7
     :durability 1
-    :when-minion-attacked (buff-self -1 1) ; todo, remember to interpret this too
+    :after-attacking (buff-self -1 1) ; todo, remember to interpret this too
   }
 }
 {

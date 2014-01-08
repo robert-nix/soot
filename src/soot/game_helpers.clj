@@ -48,7 +48,9 @@
   "Gives n damage to the current target, triggering damage-based secrets"
   [s n] (let [target (current-target s)
               damaged-armor (- (:armor target) n)
-              new-health (+ (:health target) (min 0 damaged-armor))
+              minimum-health (or (:minimum-health target) 0)
+              new-health (max minimum-health
+                (+ (:health target) (min 0 damaged-armor)))
               new-armor (max 0 damaged-armor)] (cond
     (:immune target) s
     (:divine-shield target) (set-target s {:divine-shield false})
@@ -56,7 +58,6 @@
       (assoc-in [:damage-taking] n)
       (trigger-target :before-damaged)
       (set-target {:health new-health :armor new-armor})
-      ; todo: account for minimum-health
       (assoc-in [:damage-taken] n)
       (trigger-target :after-damaged)))))
 
@@ -159,7 +160,11 @@
           (assoc-in % [:state] card-state) %)))
       (tick-fatigue s))] (draw-cards drawn (dec n))) s))
 
+(defn swap-actor
+  [s] (update-in s [:actor] {0 1 1 0}))
 
+(defn swap-player
+  [s] (update-in s [:player] {0 1 1 0}))
 
 (def actor-map
   "Functions to transform card-def keys to events and stuff"
@@ -204,6 +209,12 @@
       (assoc-in c [:state] (if (>= (cards-in-hand s) 10) :discarded :drawn))
       c))))))
 
+(defn give-opponent-card
+  [s cid] (-> s
+    swap-actor
+    (give-card cid)
+    swap-actor))
+
 (defn targeter [s] (thing-by-eid (get-in s [:targeter])))
 
 (defn summon-minion
@@ -227,6 +238,12 @@
         (#(update-cards % (fn [c] (if (= (:eid c) (:targeter s))
           (assoc-in c [:right] (:last-summoned %)) c))))
         (trigger-all :after-summoned)))))
+
+(defn summon-opponent-minion
+  [s minions] (-> s
+    swap-actor
+    (summon-minion minions)
+    swap-actor))
 
 ; (defn && [& bools] (every? identity bools))
 (defn || [& bools] (some identity (cons false bools)))
@@ -278,3 +295,45 @@
 
 (defn buff-weapon [s attack health]
   (target s [:my :weapon] (buff-target attack health)))
+
+(defn buff-self [s attack health]
+  (target s [:self] (buff-target attack health)))
+
+(defn choose-one
+  "Chooses between given spell ids/names.  Does NOT create the spells, simply
+  applies their card-def's :spell function."
+  [s & choices] (choose s
+    (map card choices)
+    (map #(:name (card %)) choices)))
+
+(defn destroy-target
+  "Destroys (discards) the target"
+  ; note: for minions damaged to below 0 health, destruction is triggered after
+  ; exiting the current card's context; i.e., after a card is used, all cards
+  ; are checked for destruction.  this prevents weirdness when aoe cards and
+  ; aura minions combine.
+  [s] (-> s
+    (trigger-all :before-destroyed)
+    (set-target {:state :discarded})
+    (trigger-target :deathrattle)
+    (trigger-all :after-destroyed)))
+
+(defn destroy-self
+  [s] (target [:self] destroy-target))
+
+(defn equip-weapon
+  "Creates and summons a weapon for the current hero.  Destroys any existing
+  weapon first"
+  [s cid] (-> s
+    (target [:my :weapon] destroy-target)
+    (summon-card cid)
+    (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
+      (-> c
+        (assoc-in [:state] :played))
+      c))))))
+
+(defn destroy-opponent-weapon
+  [s] (target s [:opponent :weapon] destroy-target))
+
+(defn opponent-weapon-durability
+  [s] (:health (first (filter-all s [:opponent :weapon]))))
