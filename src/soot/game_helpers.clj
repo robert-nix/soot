@@ -9,6 +9,10 @@
   "Applies f to each card in state"
   [s f] (update-in s [:cards] (partial map f)))
 
+(defn update-last-summoned
+  [s f] (update-cards s (fn [c] (if (= (:eid c) (:last-summoned s))
+    (f c) c))))
+
 (defn index-cards
   "Adds indices to cards, required for some operations.  use this after
   shuffling"
@@ -37,12 +41,14 @@
     (for [[k v] (seq vs)] (update-target (fn [c] (assoc-in c [k] v))))) s))
 
 (defn trigger-target
-  "Triggers an event on the current target"
-  [s event] ((or (event (current-target s)) identity) s))
+  "Triggers an event on the current target.  If the event returns nil, trigger
+  acts as identity"
+  [s event] (or ((or (event (current-target s)) identity) s) s))
 
 (defn trigger-all
   "Triggers an event on every entity"
-  [s event] ((apply comp (map #(or (event %) identity) (all-things s))) s))
+  [s event] ((apply comp (map #(or ((or (event %) identity) %) %)
+    (all-things s))) s))
 
 (defn damage-target
   "Gives n damage to the current target, triggering damage-based secrets"
@@ -141,6 +147,19 @@
         f
         pop-target)))) s)))
 
+(defn target-random
+  "Doesn't branch, but performs f on a random or a number of random targets"
+  [s filters f] (let [
+    [n rest-filters] (if (number? (first filters))
+      [(first filters) (rest filters)] [1 filters])
+    choices (filter-all s rest-filters)
+    n-choices (count choices)
+    chosen (shuffle (concat (repeat n true) (repeat (- n-choices n) false)))]
+    (if (< n-choices n) nil
+      ((apply comp (for [[choice chose] [choices chosen]] (if chose
+        (fn [s] (-> s (push-target choice) f pop-target))
+        identity))) s))))
+
 (defn tick-fatigue
   "Does a tick of fatigue on the current player"
   [state] (target state [:my :hero] (fn [s] (-> s
@@ -205,9 +224,8 @@
 (defn give-card
   [s cid] (-> s
     (summon-card s cid)
-    (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
-      (assoc-in c [:state] (if (>= (cards-in-hand s) 10) :discarded :drawn))
-      c))))))
+    (update-last-summoned #(assoc-in % [:state]
+      (if (>= (cards-in-hand s) 10) :discarded :drawn)))))
 
 (defn give-opponent-card
   [s cid] (-> s
@@ -228,12 +246,10 @@
         (trigger-all :before-summoned)
         (summon-card minions)
         ; summon to the right of the targeter
-        (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
-          (-> c
-            (assoc-in [:state] :played)
-            (assoc-in [:left] (:targeter %))
-            (assoc-in [:right] (:right (targeter %))))
-          c))))
+        (update-last-summoned #(-> %
+          (assoc-in [:state] :played)
+          (assoc-in [:left] (:targeter s))
+          (assoc-in [:right] (:right (targeter s)))))
         ; update the targeter's right
         (#(update-cards % (fn [c] (if (= (:eid c) (:targeter s))
           (assoc-in c [:right] (:last-summoned %)) c))))
@@ -324,16 +340,29 @@
 (defn equip-weapon
   "Creates and summons a weapon for the current hero.  Destroys any existing
   weapon first"
+  ; todo: this feels wrong
   [s cid] (-> s
     (target [:my :weapon] destroy-target)
     (summon-card cid)
-    (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
-      (-> c
-        (assoc-in [:state] :played))
-      c))))))
+    (update-last-summoned #(assoc-in % [:state] :played))))
 
 (defn destroy-opponent-weapon
   [s] (target s [:opponent :weapon] destroy-target))
 
 (defn opponent-weapon-durability
   [s] (:health (first (filter-all s [:opponent :weapon]))))
+
+(defn create-hero
+  [cid pid] (->
+    (create-card cid pid)
+    (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
+      (-> c
+        (assoc-in [:state] :played))
+      c))))))
+
+(defn set-hero
+  [s cid] (let [pid (:actor s)]
+    (update-hero #(create-hero cid pid))))
+
+(defn count-minions
+  [s filters] (count (filter-all s (conj filters :minion))))

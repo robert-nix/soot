@@ -422,7 +422,7 @@
       ; So that any Secrets/etc. that modify minion HP take effect
       ; 'my-health' since the state has always one acting character
       ; unsure if positive health effects take place? doubtful
-      (set-hero-health (my-health %))
+      (target [:my :hero] (set-target {:health (:health (targeter %))}))
       (equip-weapon "Blood Fury")
       (destroy-self))
   }
@@ -448,7 +448,7 @@
   :minion {
     :attack 0
     :health 4
-    :when-spell-cast #((give-opponent-card (current-spell %)) %)
+    :when-spell-cast #((give-opponent-card % (:id (targeter %))))
   }
 }
 {
@@ -473,7 +473,7 @@
   :minion {
     :attack 4
     :health 4
-    :battlecry (next-turn (spells-cost 0)) ; next turn is always a 'half-turn'.
+    :battlecry #(assoc-in % [:spells-cost-next-turn] 0)
   }
 }
 {
@@ -498,7 +498,7 @@
     :attack 8
     :health 8
     :type :dragon
-    :start-of-turn (set-time-limit 15/90) ; How the fuck am I gonna do this?
+    :aura {:filter :hero :time-limit 15/90}
   }
 }
 {
@@ -540,8 +540,8 @@
   :minion {
     :attack 7
     :health 7
-    :when-my-spell-cast (modify-damage-and-healing (partial * 2))
-    :when-my-hero-power-used (modify-damage-and-healing (partial * 2))
+    ; unique abilities earn themselves unique keywords.
+    :aura {:filter [:my :hero] :prophet-velen true}
   }
 }
 {
@@ -566,7 +566,7 @@
   :minion {
     :attack 5
     :health 5
-    :deathrattle (target-random [:opponent :minion] (mind-control-target))
+    :deathrattle (target-random [:opponent :minion] mind-control-target)
   }
 }
 {
@@ -738,8 +738,7 @@
   :set :expert
   :class :warrior
   :cost 5
-  :spell #((apply comp (repeat (+ (count-minions %) -1)
-    (target-random :minion (destroy-target)))) %)
+  :spell #(target-random % [(count-minions %) :minion] destroy-target)
 }
 {
   :id 147
@@ -1030,7 +1029,7 @@
   :name "Sea Giant"
   :quality :epic
   :set :expert
-  :cost (- 10 (count-minions))
+  :cost #(- 10 (count-minions %))
   :minion {
     :attack 8
     :health 8
@@ -1166,9 +1165,7 @@
   :minion {
     :attack 0
     :health 3
-    :start-of-my-turn #(if (> (count (filter-all % [:my :drawn :minion])) 0)
-      ((target-random [:my :drawn :minion]
-        (swap-with-target)) %))
+    :start-of-my-turn (target-random [:my :drawn :minion] swap-with-target)
   }
 }
 {
@@ -1446,8 +1443,7 @@
   :minion {
     :attack 1
     :health 4
-    :start-of-my-turn (target-random [:opponent]
-      (damage-target 2))
+    :start-of-my-turn (target-random [:opponent] (damage-target 2))
   }
 }
 {
@@ -1765,8 +1761,7 @@
   :minion {
     :attack 0
     :health 5
-    :start-of-my-turn (target-random [:my :damaged]
-      (restore-health 3))
+    :start-of-my-turn (target-random [:my :damaged] (restore-health 3))
   }
 }
 {
@@ -1851,8 +1846,8 @@
   :minion {
     :attack 3
     :health 3
-    :battlecry #(if (>= (count (filter-all [:opponent :minion])) 4)
-      (target-random [:opponent :minion] (mind-control-target)))
+    :battlecry #(if (>= (count-minions [:opponent]) 4)
+      (target-random [:opponent :minion] mind-control-target))
   }
 }
 {
@@ -1863,8 +1858,8 @@
   :class :hunter
   :cost 2
   :secret {
-    :when-my-hero-attacked (target-random [{:not :attacker}]
-      (redirect-attack-target))
+    :when-my-hero-attacked (target-random [{:not :targeter}]
+      redirect-attack-target)
   }
 }
 {
@@ -2061,7 +2056,7 @@
     :health 5
     :type :beast
     :battlecry (target-random [:opponent :minion #(<= (:attack %) 2)]
-      (destroy-target))
+      destroy-target)
   }
 }
 {
@@ -2509,7 +2504,7 @@
   :set :expert
   :class :hunter
   :cost 3
-  :spell (target-random [:opponent :minion] (destroy-target))
+  :spell (target-random [:opponent :minion] destroy-target)
 }
 {
   :id 318
@@ -2815,7 +2810,7 @@
   :class :shaman
   :cost 1
   :overload 2
-  :spell (target-random [:opponent :minion] (damage-target 2))
+  :spell (target-random [2 :opponent :minion] (damage-target 2))
 }
 {
   :id 99
@@ -3047,8 +3042,8 @@
   :minion {
     :attack 3
     :health 2
-    :battlecry (apply comp (repeat 3 (target-random [{:not :self}]
-      (damage-target 1))))
+    :battlecry (apply comp (repeat 3
+      (target-random [{:not :self}] (damage-target 1))))
   }
 }
 {
@@ -3628,7 +3623,9 @@
   :class :priest
   :cost 3
   :spell (target-random [2 :opponent :undrawn] #(-> %
-    (give-card (:id (current-target %)))))
+    (give-card (:id (current-target %))))
+    ; use identity for the fallback -- thoughtsteal is usable in those cases
+    identity)
 }
 {
   :id 265
@@ -4823,8 +4820,7 @@
   :minion {
     :attack 0
     :health 3
-    :end-of-my-turn (target-random [:damaged]
-      (restore-health 6))
+    :end-of-my-turn (target-random [:damaged] (restore-health 6))
   }
 }
 {
@@ -4965,7 +4961,7 @@
   :cost 0
   :spell (target [] #(-> %
     (damage-target 4)
-    (target-random [:my :drawn] (destroy-target))))
+    (target-random [:my :drawn] destroy-target)))
 }
 {
   :id 90
@@ -5900,7 +5896,7 @@
     :attack 4
     :health 3
     :type :demon
-    :battlecry (target-random [:my :drawn] (destroy-target))
+    :battlecry (target-random [:my :drawn] destroy-target)
   }
 }
 {
