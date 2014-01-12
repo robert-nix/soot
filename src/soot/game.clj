@@ -83,4 +83,3 @@
       (update-in [:cards] shuffle)
       index-cards)
     ))
-

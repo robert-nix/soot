@@ -13,6 +13,10 @@
   [s f] (update-cards s (fn [c] (if (= (:eid c) (:last-summoned s))
     (f c) c))))
 
+(defn update-targeter
+  [s f] (update-cards s (fn [c] (if (= (:eid c) (:targeter s))
+    (f c) c))))
+
 (defn index-cards
   "Adds indices to cards, required for some operations.  use this after
   shuffling"
@@ -21,6 +25,8 @@
 (defn update-hero
   "Applies f to the current hero"
   [s f] (update-in s [:heroes (:actor s)] f))
+
+(defn current-hero [s] (get-in s [:heroes (:actor s)]))
 
 (defn current-target
   "Returns the state of the current target"
@@ -253,6 +259,9 @@
         ; update the targeter's right
         (#(update-cards % (fn [c] (if (= (:eid c) (:targeter s))
           (assoc-in c [:right] (:last-summoned %)) c))))
+        ; update the targeter's right's left
+        (#(update-cards % (fn [c] (if (= (:eid c) (:right (targeter s)))
+          (assoc-in c [:left] (:last-summoned %)) c))))
         (trigger-all :after-summoned)))))
 
 (defn summon-opponent-minion
@@ -322,6 +331,17 @@
     (map card choices)
     (map #(:name (card %)) choices)))
 
+(defn remove-target-positioning
+  "Removes the target's positioning info and updates the target's neighbors'
+  positioning info"
+  [s] (let [target (current-target s)] (-> s
+    (update-target (fn [t] (-> t
+      (assoc-in [:left] nil)
+      (assoc-in [:right] nil))))
+    (update-cards (fn [c] (cond-> c
+      (= (:eid c) (:left target)) (update-in c [:right] (:right target))
+      (= (:eid c) (:right target)) (update-in c [:left] (:left target))))))))
+
 (defn destroy-target
   "Destroys (discards) the target"
   ; note: for minions damaged to below 0 health, destruction is triggered after
@@ -332,6 +352,7 @@
     (trigger-all :before-destroyed)
     (set-target {:state :discarded})
     (trigger-target :deathrattle)
+    (remove-target-positioning)
     (trigger-all :after-destroyed)))
 
 (defn destroy-self
@@ -366,3 +387,55 @@
 
 (defn count-minions
   [s filters] (count (filter-all s (conj filters :minion))))
+
+(defn mind-control-target
+  [s] (-> s (update-target (fn [c] (assoc-in c [:owner] (- 1 (:actor s)))))))
+
+(defn polymorph-target
+  [s cid] (-> s
+    (summon-card cid)
+    ; summon to the right of the targeter
+    (update-last-summoned #(-> %
+      (assoc-in [:state] :played)
+      (assoc-in [:left] (:left (current-target s)))
+      (assoc-in [:right] (:right (current-target s)))))
+    ; update the target's left's right
+    (#(update-cards % (fn [c] (if (= (:eid c) (:left (current-target s)))
+      (assoc-in c [:right] (:last-summoned %)) c))))
+    ; update the target's right's left
+    (#(update-cards % (fn [c] (if (= (:eid c) (:right (current-target s)))
+      (assoc-in c [:left] (:last-summoned %)) c))))
+    (destroy-target)))
+
+(defn combo
+  [s normal-f combo-f] (if (> (:cards-played-this-turn s) 0)
+    (combo-f s) (normal-f s)))
+
+(defn is-dead
+  ; used in cases where the card hasn't been checked for death yet, so we check
+  ; current health as well
+  [c] (or (= (:state c) :discarded) (<= (:health c) 0)))
+
+(defn destroy-minions
+  [s] (target-all [:minion] destroy-target))
+
+(defn draw-target
+  [s] (update-target s #(update-in % [:state] :drawn)))
+
+(defn copy-target
+  [s] (let [target (current-target s)]
+    (update-targeter s (fn [t] (-> target
+      (assoc-in [:owner] (:owner t))
+      (assoc-in [:eid] (:eid t))
+      (assoc-in [:left] (:left t))
+      (assoc-in [:right] (:right t)))))))
+
+(defn hero-armor [s] (:armor (current-hero s)))
+
+(defn hero-health [s] (:health (current-hero s)))
+
+(defn return-target [s] (-> s
+  (update-target (fn [t] (-> (create-card (:id t) (:owner t))
+    (assoc-in [:eid] (:eid t))
+    (assoc-in [:state] :drawn))))
+  (remove-target-positioning)))

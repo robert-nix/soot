@@ -312,7 +312,7 @@
     :attack 4
     :health 9
     :properties [:charge]
-    :enrage (buff-self 6 0)
+    :enrage {:filter :self :attack 6}
   }
 }
 {
@@ -498,6 +498,7 @@
     :attack 8
     :health 8
     :type :dragon
+    ; comp for time-limit is *
     :aura {:filter :hero :time-limit 15/90}
   }
 }
@@ -508,10 +509,20 @@
   :set :reward
   :cost 4
   :minion {
-    :attack #(+ 2 (count-minions % :murloc))
+    :attack 2
     :health 4
     :type :murloc
     :properties [:charge]
+    ; :filter :self auras with functions work fine since we're not composing
+    ; the stats with any different timelines than our :played lifespan or until
+    ; silence...  e.g. say we are old murk-eye and we have murloc warleader and
+    ; a total of 3 other murlocs on the field for an attack value of 10.  when
+    ; we're silenced, our self-given aura goes away anyway, so we just determine
+    ; our post-silence attack from base + warleader aura (etc...); self-given
+    ; auras have no need to show up in the :aura-stats map on our state.  in the
+    ; same vein, for :aura, {:not :self} is a default, and :self is a special
+    ; case
+    :aura {:filter :self :attack #(* 2 (dec (count-minions % :murloc)))}
   }
 }
 {
@@ -713,7 +724,7 @@
   :minion {
     :attack 4
     :health 2
-    :battlecry (target [:minion (> (:attack %) 6)]
+    :battlecry (target [:minion #(> (:attack %) 6)]
       (destroy-target))
   }
 }
@@ -764,7 +775,7 @@
     :attack 1
     :health 1
     :type :beast
-    :battlecry (draw-random :pirate)
+    :battlecry (target-random [:my :undrawn :pirate] draw-target)
   }
 }
 {
@@ -914,7 +925,9 @@
   :set :expert
   :class :paladin
   :cost 8
-  :spell #(-> (heal-hero 8) (draw-cards 3))
+  :spell #(-> %
+    (target [:my :hero] (restore-health 8))
+    (draw-cards 3))
 }
 {
   :id 301
@@ -960,7 +973,7 @@
     :attack 3
     :health 3
     :type :murloc
-    :aura {:filter :murloc :attack #(+ 2 %) :health inc}
+    :aura {:filter :murloc :attack 2 :health 1}
   }
 }
 {
@@ -1065,7 +1078,7 @@
   :set :expert
   :class :warrior
   :cost 1
-  :spell (target :minion #((damage-target (hero-armor %)) %))
+  :spell (target [:minion] #((damage-target (hero-armor %)) %))
 }
 {
   :id 210
@@ -1089,7 +1102,7 @@
     :attack 3
     :health 3
     :type :pirate
-    :aura {:filter [:my :pirate] :attack #(+ 1 %) :health #(+ 1 %)}
+    :aura {:filter [:my :pirate] :attack 1 :health 1}
   }
 }
 {
@@ -1227,7 +1240,7 @@
     :attack 1
     :health 1
     :type :beast
-    :enrage (buff-self 5 0)
+    :enrage {:filter :self :attack 5}
   }
 }
 {
@@ -1280,8 +1293,8 @@
   :minion {
     :attack 3
     :health 5
-    ; handle this in restore-health, apply aura to everything as a signal
-    :aura :auchenai-soulpriest-aura
+    ; handle this in restore-health, apply aura to our hero as a signal
+    :aura {:filter [:my :hero] :auchenai-soulpriest-aura true}
   }
 }
 {
@@ -1799,7 +1812,7 @@
   :minion {
     :attack 2
     :health 2
-    :aura {:filter :hero :minions-cost inc}
+    :aura {:filter :hero :minions-cost 1}
   }
 }
 {
@@ -1923,7 +1936,7 @@
   :minion {
     :attack 2
     :health 2
-    :aura {:filter [:my :hero] :first-minion-costs dec}
+    :aura {:filter [:my :hero] :first-minion-costs -1}
   }
 }
 {
@@ -2220,7 +2233,7 @@
   :minion {
     :attack 2
     :health 3
-    :enrage (buff-self 3 0)
+    :enrage {:filter :self :attack 5}
   }
 }
 {
@@ -2382,7 +2395,7 @@
     :health 1
     :type :demon
     :properties :stealth
-    :aura {:filter [:my :minion] :health inc}
+    :aura {:filter [:my :minion] :health 1}
   }
 }
 {
@@ -2586,7 +2599,7 @@
     :attack 2
     :health 2
     :type :beast
-    :aura {:filter :adjacent :attack inc}
+    :aura {:filter :adjacent :attack 1}
   }
 }
 {
@@ -3016,9 +3029,9 @@
   :minion {
     :attack 0
     :health 5
-    ; just a sketch; needs to be an aura (silencible), but functions are applied
-    ; to the values of their keyword, so using keywords instead
-    :aura {:filter :self :attack :health}
+    ; this guy's attack can't be buffed, so we're making a special keyword for
+    ; him
+    :attack= #(:health (targeter %))
   }
 }
 {
@@ -3242,7 +3255,7 @@
   :minion {
     :attack 3
     :health 3
-    :enrage (target [:self] (give-target {:windfury true :attack 1}))
+    :enrage {:filter :self :windfury true :attack 1}
   }
 }
 {
@@ -3448,7 +3461,7 @@
   :minion {
     :attack 3
     :health 2
-    :aura (spells-cost dec)
+    :aura {:filter [:my :hero] :spells-cost -1}
   }
 }
 {
@@ -3472,8 +3485,7 @@
     :attack 2
     :health 1
     :type :pirate
-    ; todo: as above
-    :aura {:filter :self :charge :weapon-equipped}
+    :aura {:filter :self :charge #(count (filter-all % [:my :weapon]))}
   }
 }
 {
@@ -3498,7 +3510,7 @@
   :minion {
     :attack 4
     :health 6
-    :enrage (target [:my :weapon] (buff-target 2 0))
+    :enrage {:filter [:my :weapon] :attack 2}
   }
 }
 {
@@ -3586,7 +3598,8 @@
   :minion {
     :attack 0
     :health 4
-    :aura {:filter [:drawn :minion] :minimum-cost 1 :cost (partial + -2)}
+    ; lol
+    :aura {:filter [:my :hero] :summoning-portals 1}
   }
 }
 {
@@ -3599,7 +3612,7 @@
     :attack 2
     :health 3
     :properties [:taunt]
-    :enrage (buff-self 3 0)
+    :enrage {:filter :self :attack 3}
   }
 }
 {
@@ -3719,7 +3732,7 @@
   :minion {
     :attack 7
     :health 6
-    :aura {:filter [:my :hero] :minions-cost #(+ % 3)}
+    :aura {:filter [:my :hero] :minions-cost 3}
   }
 }
 {
@@ -4248,7 +4261,7 @@
     :attack 0
     :health 3
     :type :totem
-    :aura {:filter :adjacent :attack (partial + 2)}
+    :aura {:filter :adjacent :attack 2}
   }
 }
 {
@@ -4352,7 +4365,7 @@
     :attack 1
     :health 1
     :type :murloc
-    :aura {:filter :murloc :attack inc}
+    :aura {:filter :murloc :attack 1}
   }
 }
 {
@@ -4585,7 +4598,7 @@
   :minion {
     :attack 2
     :health 4
-    :aura {:filter [:my :minion] :attack inc}
+    :aura {:filter [:my :minion] :attack 1}
   }
 }
 {
@@ -5025,7 +5038,7 @@
   :minion {
     :attack 6
     :health 6
-    :aura {:filter [:my :minion] :attack inc :health inc}
+    :aura {:filter [:my :minion] :attack 1 :health 1}
   }
 }
 {
@@ -5710,7 +5723,7 @@
   :minion {
     :attack 2
     :health 2
-    :aura {:filter [:my :minion] :attack inc}
+    :aura {:filter [:my :minion] :attack 1}
   }
 }
 {
@@ -5922,7 +5935,7 @@
     :attack 1
     :health 1
     :type :beast
-    :aura {:filter [:my :beast] :attack inc}
+    :aura {:filter [:my :beast] :attack 1}
   }
 }
 {
