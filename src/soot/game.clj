@@ -2,19 +2,31 @@
 ; randomly.
 (ns soot.game
   (:require [clojure.set :as set]
-            [clojure.math.combinatorics :as combo]))
+            [clojure.math.combinatorics :as combo]
+            [clojure.pprint :refer [pprint]]))
+
+(defn without
+  [coll n]
+  (concat (take n coll) (nthrest coll (inc n))))
 
 ; mockup of the ai primitive
 (defn choose
   "Branches between the supplied functions on state"
   [s fns labels]
-  (if (< (count fns) 1)
-    (println "Can't choose from nothing:" labels)
-    (let [choice (rand-int (count fns))]
-      (println "Choosing:")
-      (println labels)
-      (println "Chose" choice (nth labels choice))
-      ((nth fns choice) s))))
+  (if (first fns)
+    (let [choice 0 ; (rand-int (count fns))
+          ; _ (pprint s)
+          ; _ (pprint fns)
+          ; _ (pprint labels)
+          chose ((nth fns choice) s)]
+      (if chose
+        (do
+          ; (println "\nChoosing:")
+          ; (println labels)
+          ; (println "Chose" choice (nth labels choice))
+          chose)
+        (recur s (without fns choice) (without labels choice))))
+    nil))
 
 (load "game_helpers")
 (load "cards")
@@ -61,11 +73,10 @@
   swap-actor))
 
 (defn mulligan
-  "Do mulliganing for the current player"
+  "Do mulliganing for the current actor"
   [s] (let [
     subsets (combo/subsets (filter-all s [:my :drawn :card]))
     eidsets (map #(set (map vector (repeat :eid) (map :eid %))) subsets)
-    _ (println eidsets)
     chosen (choose s
       ; transitions
       (for [eidset eidsets]
@@ -81,5 +92,25 @@
       (update-cards #(if (some #{[:state :mulliganing]} %)
         (assoc-in % [:state] :undrawn) %))
       (update-in [:cards] shuffle)
-      (index-cards))
-    ))
+      (index-cards))))
+
+(defn play-turn
+  "Runs a full turn of play for the current actor"
+  [s] (-> s
+    (trigger-all :start-of-turn)
+    (update-hero (fn [h]
+      (assoc h :mana-crystal
+        (min 10 (+ (or (:mana-crystal h) 0) 1)))))
+    (update-hero (fn [h]
+      (assoc h :mana
+        (max (- (:mana-crystal h) (or (:overload h) 0)) 0))))
+    (draw-cards 1)
+    (choose-loop)
+    ((fn [s]
+      (if (first (filter-all s [:hero :discarded]))
+        (-> s
+          (assoc :game-over true)
+          (assoc :winner (:owner (first (filter-all s [:hero :played])))))
+        (-> s
+          (trigger-all :end-of-turn)
+          (reset-turn-stats)))))))

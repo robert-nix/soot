@@ -4,9 +4,9 @@
 
 (defn thing-by-eid [s eid] (first (filter #(= (:eid %) eid) (all-things s))))
 
-(defn targeter [s] (thing-by-eid (:targeter s)))
+(defn targeter [s] (thing-by-eid s (:targeter s)))
 
-(defn observer [s] (thing-by-eid (:observer s)))
+(defn observer [s] (thing-by-eid s (:observer s)))
 
 (defn last-summoned [s] (thing-by-eid (:last-summoned s)))
 
@@ -31,13 +31,17 @@
   "Applies f to the current hero"
   [s f] (update-in s [:heroes (:actor s)] f))
 
+(defn update-all
+  "Applies f to cards and heroes"
+  [s f] (-> s (update-hero f) (update-cards f)))
+
 (defn current-hero [s] (get-in s [:heroes (:actor s)]))
 
 (defn current-target
   "Returns the state of the current target"
   [s] (let [[type n] (:target s)] (cond
     (= type :hero) ((:heroes s) n)
-    (= type :card) ((:cards s) n))))
+    (= type :card) (nth (:cards s) n))))
 
 (defn update-target
   "Applies f to the current target"
@@ -49,54 +53,18 @@
 (defn set-target
   "Sets state on the current target"
   ([s vs] ((apply comp
-    (for [[k v] (seq vs)] (update-target (fn [c] (assoc c k v))))) s))
+    (for [[k v] (seq vs)] #(update-target % (fn [c] (assoc c k v))))) s))
   ([vs] (fn [s] (set-target s vs))))
 
 ; observer stack (used to tell an event notifee who they are)
 
 (defn push-observer [s o] (-> s
   (update-in [:observer-stack] (fn [stack] (cons (:observer s) stack)))
-  (assoc :observer (:eid o))))
+  (assoc :observer o)))
 
 (defn pop-observer [s] (-> s
   (assoc :observer (first (:observer-stack s)))
   (update-in [:observer-stack] rest)))
-
-(defn trigger-target
-  "Triggers an event on the current target.  If the event returns nil, trigger
-  acts as identity"
-  [s event] (let [f (or (event (current-target s)) identity)]
-    (-> s
-      (push-observer (current-target s))
-      (#(or (f %) %))
-      pop-observer)))
-
-(defn trigger-all
-  "Triggers an event on every entity"
-  [s event] (reduce #(%2 %1) s (map (fn
-    [c] (let [f (or (event c) identity)]
-      (fn [state] (-> state
-        (push-observer c)
-        (#(or (f %) %))
-        pop-observer)))) (all-things s))))
-
-(defn damage-target
-  "Gives n damage to the current target, triggering damage-based secrets"
-  ([s n] (let [target (current-target s)
-              damaged-armor (- (:armor target) n)
-              minimum-health (or (:minimum-health target) 0)
-              new-health (max minimum-health
-                (+ (:health target) (min 0 damaged-armor)))
-              new-armor (max 0 damaged-armor)] (cond
-    (:immune target) s
-    (:divine-shield target) (set-target s {:divine-shield false})
-    true (-> s
-      (assoc :damage-taking n)
-      (trigger-all :before-damaged)
-      (set-target {:health new-health :armor new-armor})
-      (assoc :damage-taken n)
-      (trigger-all :after-damaged)))))
-  ([n] (fn [s] (damage-target s n))))
 
 (def filter-map
   "keywords to boolean predicates for use with filter-all"
@@ -113,6 +81,7 @@
   ; types
   :character (fn [s] #(or (:hero %) (:minion %)))
   :card (fn [s] #(or (:weapon %) (:minion %) (:spell %) (:secret %)))
+  :all (fn [s] (fn [c] true))
   ; etc
   :damaged (fn [s] #(< (:health %) (:max-health %)))
   :last-summoned (fn [s] #(= (:eid %) (:last-summoned s)))
@@ -130,16 +99,23 @@
     (if pred (pred s) (if (map? filt)
       ; Thank god for nullpointerexceptions or I'll have no idea if this is okay
       ((filter-map (first (keys filt)))
-        (filter-pred s (filter-map (first (vals filt)))))
+        (filter-pred s (or (filter-map (first (vals filt))) (first (vals filt)))))
       filt))))
 
 (defn add-default-filters
   [filters] (cond->> filters
-    (not-any? #{:undrawn :drawn :mulliganing :played :discarded} filters)
+    (not-any? #{:self :undrawn :drawn :mulliganing :played :discarded} filters)
     (cons :played)
-    (not-any? #{:card :weapon :character :hero :minion :spell :hero-power
-      :secret} filters)
+    (not-any? #{:self :card :weapon :character :hero :minion :spell :hero-power
+      :secret :all} filters)
     (cons :character)))
+
+(defn add-direct-filters
+  "Adds filters for direct targeting, implementing stealth and spell immunity;
+  requires state to discern whether we are targeting via a spell or a minion."
+  [s filters] (cond->> filters
+    (not-any? #{:self :my} filters) (cons {:not :stealth})
+    (:spell (targeter s)) (cons {:not :spell-immunity})))
 
 (defn filter-all
   [s filters] (let [
@@ -147,6 +123,49 @@
     ] (do (filter (fn
       [c] (every? #(% c) (map
         filter-pred (repeat s) fs))) (all-things s)))))
+
+(defn trigger-target
+  "Triggers an event on the current target.  If the event returns nil, trigger
+  acts as identity"
+  [s event] (let [f (or (event (current-target s)) identity)]
+    (-> s
+      (push-observer (:eid (current-target s)))
+      (#(or (f %) %))
+      pop-observer)))
+
+(defn trigger-all
+  "Triggers an event on every entity currently in play"
+  [s event] (reduce #(%2 %1) s (map (fn
+    [c] (let [f (or (event c) identity)]
+      (fn [state] (-> state
+        (push-observer (:eid c))
+        (#(or (f %) %))
+        pop-observer)))) (filter-all s [:all]))))
+
+(defn damage-target
+  "Gives n damage to the current target, triggering damage-based secrets"
+  ([s n]
+    (let [target (current-target s)
+          spell? (:spell (targeter s))
+          spell-damage (apply + (map
+            :spell-damage
+            (filter-all s [:my :spell-damage])))
+          damage (if spell? (+ spell-damage n) n)
+          damaged-armor (- (or (:armor target) 0) damage)
+          minimum-health (or (:minimum-health target) 0)
+          new-health (max minimum-health
+            (+ (:health target) (min 0 damaged-armor)))
+          new-armor (max 0 damaged-armor)]
+    (cond
+      (:immune target) s
+      (:divine-shield target) (set-target s {:divine-shield false})
+      true (-> s
+        (assoc :damage-taking damage)
+        (trigger-all :before-damaged)
+        (set-target {:health new-health :armor new-armor})
+        (assoc :damage-taken damage)
+        (trigger-all :after-damaged)))))
+  ([n] (fn [s] (damage-target s n))))
 
 ; target stack stuff
 
@@ -164,7 +183,7 @@
 
 (defn push-targeter [s t] (-> s
   (update-in [:targeter-stack] (fn [stack] (cons (:targeter s) stack)))
-  (assoc :targeter (:eid t))))
+  (assoc :targeter t)))
 
 (defn pop-targeter [s] (-> s
   (assoc :targeter (first (:targeter-stack s)))
@@ -177,16 +196,19 @@
   [s] (-> s
     (update-in [:target-stack] #(cons (:target s) (rest %)))))
 
+(defn target-entity
+  [s t f] (-> s
+    (push-target t)
+    f
+    pop-target))
+
 (defn target
   "Branches the game state, applying f to the state after the target is chosen;
   filters is a seq of functions or keywords.  :my and :opponent are special
   keywords that vary based on the current actor in state."
-  ([s filters f] (let [choices (filter-all s filters)]
+  ([s filters f] (let [choices (filter-all s (add-direct-filters s filters))]
     (choose s
-      (for [choice choices] (fn [s] (-> s
-        (push-target choice)
-        f
-        pop-target)))
+      (for [choice choices] (fn [s] (target-entity s choice f)))
       (map :name choices))))
   ([filters f] (fn [s] (target s filters f))))
 
@@ -251,6 +273,18 @@
 ; needed to resolve summons
 (declare card)
 
+(def property-map
+{
+  :charge 1
+  :windfury 1
+  :immune true
+  :divine-shield true
+  :taunt true
+  :freeze true
+  :stealth true
+  :spell-immunity true
+})
+
 (def actor-map
   "Functions to transform card-def keys to events and stuff.
   (fn [value] (fn [card] ... card))"
@@ -266,11 +300,17 @@
     :end-of-turn (fn [s] (if (and
         (= (:owner (targeter s)) (:owner (observer s)))) ; my
       (v s) s)))))
+  :health (fn [v] (fn [c] (-> c (assoc :health v) (assoc :max-health v))))
+  :properties (fn [v] (fn [c]
+    ((apply comp
+      (map (fn [prop]
+        (fn [card] (assoc card prop (property-map prop)))) v)) c)))
+  :type (fn [v] (fn [c] (-> c (assoc v true) (assoc :type v))))
 }
 ((apply comp (map (fn [k]
   (fn [m] (assoc m k (fn [v] (fn [c] (assoc c k v))))))
   ; these keywords simply place their value directly on the card
-  [:attack :health :spell-damage :deathrattle :battlecry])))))
+  [:attack :spell-damage :deathrattle :battlecry])))))
 
 (defn create-card
   "Creates an undrawn card given an id/name and controller id"
@@ -296,11 +336,11 @@
 (defn summon-card
   [s cid] (-> s
     (update-in [:cards]
-      (fn [cs] (conj cs (-> (create-card cid (:actor s))
+      (fn [cs] (vec (concat cs [(-> (create-card cid (:actor s))
         (assoc :index (count cs))
         (assoc :eid (:next-eid s))
         (assoc :summoned true)
-        (assoc :state :undrawn)))))
+        (assoc :state :undrawn))]))))
     (assoc :last-summoned (:next-eid s))
     (update-in [:next-eid] inc)))
 
@@ -330,6 +370,7 @@
         (summon-card minions)
         ; summon to the right of the targeter
         (update-last-summoned #(-> %
+          (assoc :summoning-sickness true)
           (assoc :state :played)
           (assoc :left (:targeter s))
           (assoc :right (:right (targeter s)))))
@@ -375,6 +416,7 @@
       (target [:self] return-target)
       (assoc :last-summoned target-eid)
       (update-target (fn [t] (-> t
+        (assoc :summoning-sickness true)
         (assoc :state :played)
         (assoc :left (:left (targeter s)))
         (assoc :right (:right (targeter s))))))
@@ -446,7 +488,7 @@
   "Chooses between given spell ids/names.  Does NOT create the spells, simply
   applies their card-def's :spell function."
   ([s choices] (choose s
-    (map card choices)
+    (map :spell (map card choices))
     (map #(:name (card %)) choices)))
   ([choices] (fn [s] (choose-one s choices))))
 
@@ -487,6 +529,7 @@
   [cid pid] (->
     (create-card cid pid)
     (assoc :state :played)
+    (assoc :index pid)
     (assoc :eid (- pid 2))))
 
 (defn set-hero
@@ -506,6 +549,7 @@
     ; summon to the right of the targeter
     (update-last-summoned #(-> %
       (assoc :state :played)
+      (assoc :summoning-sickness true)
       (assoc :left (:left (current-target s)))
       (assoc :right (:right (current-target s)))))
     ; update the target's left's right
@@ -637,3 +681,217 @@
           :stealth :spell-damage :deathrattle :aura))))
       ; reapply auras gained from others
       (give-target (:aura-gains t)))))
+
+(defn use-minion
+  "Attacks with a minion"
+  [eid] (fn [state]
+    (let [minion (thing-by-eid state eid)
+          times-attacking (or (:times-attacking minion) 0)
+          times-can-attack (if (:windfury minion) 2 1)
+          can-attack (and
+            (or
+              (> (or (:charge minion) 0) 0)
+              (not (:summoning-sickness minion)))
+            (not (:cant-attack minion))
+            (not (:freeze minion))
+            (> (:attack minion) 0)
+            (< times-attacking times-can-attack))]
+      (if can-attack
+        (-> state
+          (push-targeter eid)
+          (target [:opponent] (fn [s] (-> s
+            (trigger-all :before-attacked)
+            (damage-target (:attack minion))
+            (update-targeter #(assoc % :times-attacking (inc times-attacking)))
+            (push-targeter (:eid (current-target s)))
+            (target-entity minion (fn [st] (-> st
+              (damage-target (:attack (targeter st))))))
+            (pop-targeter)
+            (trigger-all :after-attacked))))
+          pop-targeter)
+        nil))))
+
+(defn play-minion
+  "Plays a minion (targeter) to the right of the current target"
+  [s] (let [targeter-eid (:targeter s)
+            tar (current-target s)
+            target-eid (:eid tar)]
+    (-> s
+      (trigger-all :before-summoned)
+      (assoc :last-summoned targeter-eid)
+      ; summon to the right of the target
+      (update-last-summoned #(-> %
+        (assoc :state :played)
+        (assoc :summoning-sickness true)
+        (assoc :left target-eid)
+        (assoc :right (:right tar))))
+      (update-cards (fn [c] (cond-> c
+        ; update the target's right
+        (= (:eid c) target-eid) (assoc c :right targeter-eid)
+        ; update the target's right's left
+        (= (:eid c) (:right tar)) (assoc c :left targeter-eid))))
+      (target-entity (targeter s) #(trigger-target % :battlecry))
+      (trigger-all :after-summoned))))
+
+(defn use-card
+  "Uses a card (spell, minion, weapon, or secret)"
+  [eid] (fn [state]
+    (let [thing (thing-by-eid state eid)
+          cost (if (fn? (:cost thing)) ((:cost thing) state) (:cost thing))
+          unusable (> cost (:mana (current-hero state)))
+          cant-play-minions (>= (count (filter-all state [:my :minion])) 7)
+          invalid (fn [_] nil)
+          used (or unusable (cond-> state
+            true (->
+              (push-targeter eid)
+              (trigger-all :before-played))
+            (:minion thing) (->
+              (target [:my] play-minion))
+            (:weapon thing) (->
+              (target [:my :weapon] destroy-target)
+              (assoc :last-summoned eid)
+              (update-last-summoned #(-> %
+                (assoc :state :played)))
+              (target [:self] #(trigger-target % :battlecry)))
+            (:secret thing) (->
+              (assoc :last-summoned eid)
+              (update-last-summoned #(-> %
+                (assoc :state :played))))
+            (:spell thing) (->
+              (update-targeter #(assoc % :state :discarded))
+              ((:use thing)))))]
+      (if used
+        (if unusable nil
+          (if (and (:minion thing) cant-play-minions) nil
+            (-> used
+              (update-hero (fn [h] (update-in h [:mana] #(- % cost))))
+              (trigger-all :after-played)
+              (update-in [:cards-played-this-turn] #(+ (or % 0) 1))
+              pop-targeter)))))))
+
+(defn use-hero-power
+  [s]
+  (let [hero (current-hero s)
+        times-power-used (or (:times-power-used hero) 0)
+        cost (:cost (:power hero))
+        unusable (or (> cost (:mana hero)) (>= times-power-used 1))]
+    (if unusable
+      nil
+      (-> s
+        (push-targeter (:eid hero))
+        ((:hero-power (:power hero)))
+        (update-hero (fn [h]
+          (update-in h [:mana] #(- % cost))))
+        (update-hero (fn [h]
+          (assoc h :times-power-used (inc times-power-used))))
+        pop-targeter))))
+
+(defn attack-with-hero
+  [state]
+    (let [hero (current-hero state)
+          times-attacking (or (:times-attacking hero) 0)
+          times-can-attack (if
+            (:windfury (first (filter-all state [:my :weapon]))) 2 1)
+          can-attack (and
+            (not (:freeze hero))
+            (> (or (:attack hero) 0) 0)
+            (< times-attacking times-can-attack))]
+      (if can-attack
+        (-> state
+          (push-targeter (:eid hero))
+          (target [:opponent] (fn [s] (-> s
+            (trigger-all :before-attacked)
+            (damage-target (:attack hero))
+            (update-hero (fn [h] (assoc h :times-attacking (inc times-attacking))))
+            (push-targeter (:eid (current-target s)))
+            (target-entity hero
+              (fn [st] (let [rec-damage (or (:attack (targeter st)) 0)]
+                (if (> rec-damage 0)
+                  (damage-target rec-damage)
+                  st))))
+            (pop-targeter)
+            (trigger-all :after-attacked))))
+          pop-targeter)
+        nil)))
+
+(defn end-turn
+  [s] (assoc s :turn-ended true))
+
+(defn choose-loop
+  "Enumerates the choices in a turn of play, chooses one, and updates any state
+  that needs to be updated after each action is taken.  This repeats until the
+  choice is made to end the turn."
+  [s]
+  (let [my-cards (filter-all s [:my :drawn :card])
+        my-minions (filter-all s [:my :minion])
+        used-cards (map use-card (map :eid my-cards))
+        card-names (map :name my-cards)
+        used-minions (map use-minion (map :eid my-minions))
+        minion-names (map :name my-minions)
+        choices (concat used-cards used-minions
+          [use-hero-power attack-with-hero end-turn])
+        labels (concat card-names minion-names
+          ["Hero Power" "Attack with Hero" "End Turn"])
+        action-taken (-> s
+          ; if this returns nil something has gone wrong
+          (choose choices labels)
+          ((fn [st] (if (:actor st)
+            st
+            (do
+              (println "CHOOSE RETURNED NIL")
+              (pprint choices)
+              (pprint labels)
+              (pprint s)
+              (pprint st) nil))))
+          ; destroy dead weapons
+          (target-all [:my :weapon] (fn [s]
+            (if (<= (:health (current-target s)) 0)
+              (destroy-target s)
+              s)))
+          ; recalculate hero attack
+          (#(update-hero % (fn [h]
+            (assoc h :attack (+
+              (or (:attack-this-turn h) 0)
+              (or (:attack (first (filter-all % [:my :weapon]))) 0))))))
+          ; destroy dead minions and heroes
+          (target-all [] (fn [s]
+            (if (<= (or (:health (current-target s)) 1) 0)
+              (destroy-target s)
+              s)))
+          ; apply end-of-turn if a hero is dead
+          (#(update-in % [:turn-ended] (fn [v] (or v
+            (first (filter-all % [:hero :discarded])))))))]
+    (if (:turn-ended action-taken) action-taken (recur action-taken))))
+
+(defn reset-turn-stats
+  "Resets or turns over state values specific to this turn, e.g.
+  attack-this-turn, overload."
+  [s] (-> s
+    (update-all
+      (fn [c]
+        (cond-> c
+          (:attack-this-turn c)
+          (update-in [:attack] #(- % (or (:attack-this-turn c) 0)))
+          true
+          (dissoc
+            :immune
+            :times-attacking
+            :summoning-sickness
+            :times-power-used
+            :attack-this-turn
+            :minimum-health-this-turn
+            :stealth-this-turn
+            :overload)
+          (:overload-next-turn c)
+          (assoc :overload (:overload-next-turn c))
+          (:stealth-next-turn c)
+          (assoc :stealth-this-turn (:stealth-next-turn c))
+          )))
+    (dissoc
+      :turn-ended
+      :cards-played-this-turn
+      :spells-cost-this-turn
+      :spells-cost-next-turn)
+    (cond->
+      (:spells-cost-next-turn s)
+      (assoc :spells-cost-this-turn (:spells-cost-next-turn s)))))

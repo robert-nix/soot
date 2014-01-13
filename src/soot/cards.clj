@@ -473,7 +473,7 @@
   :minion {
     :attack 4
     :health 4
-    :battlecry #(assoc-in % [:spells-cost-next-turn] 0)
+    :battlecry #(assoc % :spells-cost-next-turn 0)
   }
 }
 {
@@ -614,7 +614,7 @@
   :minion {
     :attack 2
     :health 2
-    :battlecry (target [:minion]
+    :battlecry (target [:minion {:not :self}]
       #(-> % (polymorph-target (rand-nth ["Devilsaur" "Squirrel"]))))
   }
 }
@@ -1703,7 +1703,7 @@
   :minion {
     :attack 2
     :health 4
-    :battlecry (choose-one ["Moonfire" "Dispel"])
+    :battlecry (choose-one [111 "Dispel"])
   }
 }
 {

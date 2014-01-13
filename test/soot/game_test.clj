@@ -1,7 +1,8 @@
 (ns soot.game-test
   (:require [clojure.test :refer :all]
             [soot.game :refer :all]
-            [clojure.pprint :refer [pprint]]))
+            [clojure.pprint :refer [pprint]]
+            [criterium.core :as crit]))
 
 (def druid-deck [
   "Innervate" "Innervate"
@@ -25,18 +26,29 @@
   "Cenarius"
 ])
 
+(defn druid-game
+  []
+  (-> (create-game
+      "Malfurion Stormrage"
+      druid-deck
+      "Malfurion Stormrage"
+      druid-deck)
+    mulligan
+    swap-actor
+    mulligan
+    (give-card "The Coin")
+    swap-actor))
+
+(defn turn-until-win
+  [s] (let [next-turn
+            (-> s
+              play-turn
+              swap-actor)]
+    (if (:game-over next-turn)
+      next-turn
+      (recur next-turn))))
+
 (deftest random-game-test
   (testing "FIXME, I fail."
-    (pprint (->
-      (create-game
-        "Malfurion Stormrage"
-        druid-deck
-        "Malfurion Stormrage"
-        druid-deck)
-      mulligan
-      swap-actor
-      mulligan
-      (give-card "The Coin")
-      swap-actor
-      (filter-all [:my :drawn :card])))
+    (crit/bench (turn-until-win (druid-game)))
     (is (= 0 1))))
