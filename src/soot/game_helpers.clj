@@ -23,9 +23,9 @@
     (f c) c))))
 
 (defn index-cards
-  "Adds indices to cards, required for some operations.  use this after
-  shuffling"
-  [s] (update-in s [:cards] (fn [cs] (map (fn [c i] (assoc c :index i))))))
+  "Adds indices to cards; use this after shuffling"
+  [s] (update-in s [:cards] (fn
+    [cs] (map (fn [c i] (assoc c :index i)) cs (range)))))
 
 (defn update-hero
   "Applies f to the current hero"
@@ -112,7 +112,7 @@
   :discarded (fn [s] #(= (:state %) :discarded))
   ; types
   :character (fn [s] #(or (:hero %) (:minion %)))
-  :card (fn [s] #(or (:weapon %) (:minion %) (:spell %)))
+  :card (fn [s] #(or (:weapon %) (:minion %) (:spell %) (:secret %)))
   ; etc
   :damaged (fn [s] #(< (:health %) (:max-health %)))
   :last-summoned (fn [s] #(= (:eid %) (:last-summoned s)))
@@ -137,7 +137,8 @@
   [filters] (cond->> filters
     (not-any? #{:undrawn :drawn :mulliganing :played :discarded} filters)
     (cons :played)
-    (not-any? #{:card :weapon :character :hero :minion :spell :hero-power} filters)
+    (not-any? #{:card :weapon :character :hero :minion :spell :hero-power
+      :secret} filters)
     (cons :character)))
 
 (defn filter-all
@@ -220,9 +221,6 @@
 
 (defn swap-actor
   [s] (update-in s [:actor] {0 1 1 0}))
-
-(defn swap-player
-  [s] (update-in s [:player] {0 1 1 0}))
 
 (defn tick-fatigue
   "Does a tick of fatigue on the current player"
@@ -308,7 +306,7 @@
 
 (defn give-card
   ([s cid] (-> s
-    (summon-card s cid)
+    (summon-card cid)
     (update-last-summoned #(assoc % :state
       (if (>= (cards-in-hand s) 10) :discarded :drawn)))))
   ([cid] (fn [s] (give-card s cid))))

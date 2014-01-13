@@ -9,11 +9,12 @@
   "Branches between the supplied functions on state"
   [s fns labels]
   (if (< (count fns) 1)
-    (println "What the fuck" (nth labels 0))
-    (do
+    (println "Can't choose from nothing:" labels)
+    (let [choice (rand-int (count fns))]
       (println "Choosing:")
       (println labels)
-      ((nth fns 0) s))))
+      (println "Chose" choice (nth labels choice))
+      ((nth fns choice) s))))
 
 (load "game_helpers")
 (load "cards")
@@ -43,9 +44,7 @@
 (defn create-game
   "Initializes a game up to before the mulliganing phase"
   [first-hero first-deck second-hero second-deck] (-> {
-    ; the current player index
-    :player 0
-    ; whoever owns the current actor, determining :my/:opponent in most cases
+    ; whoever owns the current actor, determining :my/:opponent
     :actor 0
     ; hero, hero power, mana, and refs to weapon, minions
     :heroes (apply hash-map (interleave [0 1]
@@ -55,31 +54,32 @@
       (fn [v] (let [[pid deck] v] (map create-card deck (repeat pid))))
       [[0 first-deck] [1 second-deck]])) (range))
   }
+  (#(assoc % :next-eid (count (:cards %))))
   (draw-cards 3)
-  swap-player
+  swap-actor
   (draw-cards 4)
-  swap-player))
+  swap-actor))
 
 (defn mulligan
   "Do mulliganing for the current player"
   [s] (let [
-    subsets (combo/subsets (filter-all s [:my :drawn]))
+    subsets (combo/subsets (filter-all s [:my :drawn :card]))
     eidsets (map #(set (map vector (repeat :eid) (map :eid %))) subsets)
+    _ (println eidsets)
     chosen (choose s
       ; transitions
       (for [eidset eidsets]
-        (update-cards (fn [c]
+        (fn [s] (update-cards s (fn [c]
           (if (some eidset c)
-            (assoc-in c [:state] :mulliganing)
-            c))))
+            (assoc c :state :mulliganing)
+            c)))))
       ; names
       (map #(map :name %) subsets))]
     ; with chosen, draw count mulliganing, make mulliganing undrawn, shuffle
     (-> chosen
-      ; shouldn't need :my, just to make it read better
-      (draw-cards (count (filter-all s [:my :mulliganing])))
+      (draw-cards (count (filter-all chosen [:my :mulliganing :card])))
       (update-cards #(if (some #{[:state :mulliganing]} %)
         (assoc-in % [:state] :undrawn) %))
       (update-in [:cards] shuffle)
-      index-cards)
+      (index-cards))
     ))

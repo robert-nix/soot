@@ -27,9 +27,16 @@
 
 (deftest random-game-test
   (testing "FIXME, I fail."
-    (pprint (create-game
-      "Malfurion Stormrage"
-      druid-deck
-      "Malfurion Stormrage"
-      druid-deck))
+    (pprint (->
+      (create-game
+        "Malfurion Stormrage"
+        druid-deck
+        "Malfurion Stormrage"
+        druid-deck)
+      mulligan
+      swap-actor
+      mulligan
+      (give-card "The Coin")
+      swap-actor
+      (filter-all [:my :drawn :card])))
     (is (= 0 1))))
