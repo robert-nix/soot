@@ -8,12 +8,12 @@
 (defn choose
   "Branches between the supplied functions on state"
   [s fns labels]
-  (if (> (count fns) 1)
-    ((fns 0) s)
+  (if (< (count fns) 1)
+    (println "What the fuck" (nth labels 0))
     (do
       (println "Choosing:")
       (println labels)
-      ((fns 0) s))))
+      ((nth fns 0) s))))
 
 (load "game_helpers")
 (load "cards")
@@ -31,7 +31,7 @@
   by name, throwing an exception if not exactly one card is found"
   [id] (if (number? id)
     (cards-by-id id)
-    (let [result (filter #(= (:name %) id))]
+    (let [result (filter #(= (:name %) id) cards)]
       (if (= 1 (count result))
         (first result)
         (throw (Exception. (str
@@ -48,8 +48,8 @@
     ; whoever owns the current actor, determining :my/:opponent in most cases
     :actor 0
     ; hero, hero power, mana, and refs to weapon, minions
-    :heroes (map hash-map [0 1]
-      (map create-hero [first-hero second-hero] [0 1]))
+    :heroes (apply hash-map (interleave [0 1]
+      (map create-hero [first-hero second-hero] [0 1])))
     ; everything else - mix together the players to keep the structure flat
     :cards (map (fn [card eid] (assoc-in card [:eid] eid)) (shuffle (mapcat
       (fn [v] (let [[pid deck] v] (map create-card deck (repeat pid))))

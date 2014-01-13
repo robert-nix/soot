@@ -1,9 +1,14 @@
 (in-ns 'soot.game)
 
-(defn all-things
-  [s] (flatten [(vals (:heroes s)) (:cards s)]))
+(defn all-things [s] (flatten [(vals (:heroes s)) (:cards s)]))
 
 (defn thing-by-eid [s eid] (first (filter #(= (:eid %) eid) (all-things s))))
+
+(defn targeter [s] (thing-by-eid (:targeter s)))
+
+(defn observer [s] (thing-by-eid (:observer s)))
+
+(defn last-summoned [s] (thing-by-eid (:last-summoned s)))
 
 (defn update-cards
   "Applies f to each card in state"
@@ -47,15 +52,33 @@
     (for [[k v] (seq vs)] (update-target (fn [c] (assoc c k v))))) s))
   ([vs] (fn [s] (set-target s vs))))
 
+; observer stack (used to tell an event notifee who they are)
+
+(defn push-observer [s o] (-> s
+  (update-in [:observer-stack] (fn [stack] (cons (:observer s) stack)))
+  (assoc :observer (:eid o))))
+
+(defn pop-observer [s] (-> s
+  (assoc :observer (first (:observer-stack s)))
+  (update-in [:observer-stack] rest)))
+
 (defn trigger-target
   "Triggers an event on the current target.  If the event returns nil, trigger
   acts as identity"
-  [s event] (or ((or (event (current-target s)) identity) s) s))
+  [s event] (let [f (or (event (current-target s)) identity)]
+    (-> s
+      (push-observer (current-target s))
+      (#(or (f %) %))
+      pop-observer)))
 
 (defn trigger-all
   "Triggers an event on every entity"
-  [s event] ((apply comp (map #(or ((or (event %) identity) %) %)
-    (all-things s))) s))
+  [s event] (reduce #(%2 %1) s (map (fn
+    [c] (let [f (or (event c) identity)]
+      (fn [state] (-> state
+        (push-observer c)
+        (#(or (f %) %))
+        pop-observer)))) (all-things s))))
 
 (defn damage-target
   "Gives n damage to the current target, triggering damage-based secrets"
@@ -69,17 +92,17 @@
     (:divine-shield target) (set-target s {:divine-shield false})
     true (-> s
       (assoc :damage-taking n)
-      (trigger-target :before-damaged)
+      (trigger-all :before-damaged)
       (set-target {:health new-health :armor new-armor})
       (assoc :damage-taken n)
-      (trigger-target :after-damaged)))))
+      (trigger-all :after-damaged)))))
   ([n] (fn [s] (damage-target s n))))
 
 (def filter-map
   "keywords to boolean predicates for use with filter-all"
 {
-  :my (fn [s] #(= (:controller %) (:actor s)))
-  :opponent (fn [s] #(not= (:controller %) (:actor s)))
+  :my (fn [s] #(= (:owner %) (:actor s)))
+  :opponent (fn [s] #(not= (:owner %) (:actor s)))
   :self (fn [s] #(= (:eid %) (:targeter s)))
   ; states
   :undrawn (fn [s] #(= (:state %) :undrawn))
@@ -89,6 +112,7 @@
   :discarded (fn [s] #(= (:state %) :discarded))
   ; types
   :character (fn [s] #(or (:hero %) (:minion %)))
+  :card (fn [s] #(or (:weapon %) (:minion %) (:spell %)))
   ; etc
   :damaged (fn [s] #(< (:health %) (:max-health %)))
   :last-summoned (fn [s] #(= (:eid %) (:last-summoned s)))
@@ -113,15 +137,17 @@
   [filters] (cond->> filters
     (not-any? #{:undrawn :drawn :mulliganing :played :discarded} filters)
     (cons :played)
-    (not-any? #{:weapon :character :hero :minion :spell :hero-power})
+    (not-any? #{:card :weapon :character :hero :minion :spell :hero-power} filters)
     (cons :character)))
 
 (defn filter-all
   [s filters] (let [
     fs (add-default-filters (flatten [filters]))
-    ] (filter (fn
+    ] (do (filter (fn
       [c] (every? #(% c) (map
-        filter-pred (repeat s) fs))))) (all-things s))
+        filter-pred (repeat s) fs))) (all-things s)))))
+
+; target stack stuff
 
 (defn target-info [t] [(if (:hero t) :hero :card) (:index t)])
 
@@ -132,6 +158,16 @@
 (defn pop-target [s] (-> s
   (assoc :target (first (:target-stack s)))
   (update-in [:target-stack] rest)))
+
+; targeter stack (playing, destroyer, healer, attacker, damager)
+
+(defn push-targeter [s t] (-> s
+  (update-in [:targeter-stack] (fn [stack] (cons (:targeter s) stack)))
+  (assoc :targeter (:eid t))))
+
+(defn pop-targeter [s] (-> s
+  (assoc :targeter (first (:targeter-stack s)))
+  (update-in [:targeter-stack] rest)))
 
 (defn redirect-attack-target
   "Modified the target stack so that the next popped target is the current
@@ -199,7 +235,7 @@
 (defn draw-cards
   "Draws n cards for the current player"
   ([s n] (if (> n 0) (let [
-    undrawn (:eid (first (filter-all s [:my :undrawn])))
+    undrawn (:eid (first (filter-all s [:my :undrawn :card])))
     card-state (if (>= (cards-in-hand s) 10) :discarded :drawn)
     drawn (if undrawn
       (-> s
@@ -218,10 +254,25 @@
 (declare card)
 
 (def actor-map
-  "Functions to transform card-def keys to events and stuff"
-{
-
-})
+  "Functions to transform card-def keys to events and stuff.
+  (fn [value] (fn [card] ... card))"
+(-> {
+  ; :attack (fn [v] (fn [c] (assoc c :attack v)))
+  :hero-power (fn [v] (fn [c] (assoc c :power (card v))))
+  :when-my-spell-cast (fn [v] (fn [c] (assoc c
+    :after-played (fn [s] (if (and
+        (= (:owner (targeter s)) (:owner (observer s))) ; my
+        (:spell s)) ; spell-cast
+      (v s) s)))))
+  :end-of-my-turn (fn [v] (fn [c] (assoc c
+    :end-of-turn (fn [s] (if (and
+        (= (:owner (targeter s)) (:owner (observer s)))) ; my
+      (v s) s)))))
+}
+((apply comp (map (fn [k]
+  (fn [m] (assoc m k (fn [v] (fn [c] (assoc c k v))))))
+  ; these keywords simply place their value directly on the card
+  [:attack :health :spell-damage :deathrattle :battlecry])))))
 
 (defn create-card
   "Creates an undrawn card given an id/name and controller id"
@@ -233,9 +284,14 @@
       true (->
         (assoc :state :undrawn)
         (assoc :owner pid))
-      actor (->
+      actor ((apply comp
         ; Again, NPEs help keep shit real
-        (apply comp (map #(apply actor-map %) (seq (actor card-def)))))
+        (map (fn
+          [[k v]] (let [f (actor-map k)]
+            (if f
+              (f v)
+              (println "Unknown actor prop (cid actor k):" cid actor k))))
+          (seq (actor card-def)))))
       ability (->
         (assoc :use (ability card-def))))))
 
@@ -263,10 +319,6 @@
     (give-card cid)
     swap-actor))
   ([cid] (fn [s] (give-opponent-card s cid))))
-
-(defn targeter [s] (thing-by-eid (get-in s [:targeter])))
-
-(defn last-summoned [s] (thing-by-eid (get-in s [:last-summoned])))
 
 (defn summon-minion
   "Creates and summons one or more minions for the current actor.  Does not
@@ -401,7 +453,7 @@
   ([choices] (fn [s] (choose-one s choices))))
 
 (defn destroy-target
-  "Destroys (discards) the target"
+  "Destroys (discards) the target.  Triggers deathrattles."
   ; note: for minions damaged to below 0 health, destruction is triggered after
   ; exiting the current card's context; i.e., after a card is used, all cards
   ; are checked for destruction.  this prevents weirdness when aoe cards and
@@ -436,10 +488,8 @@
 (defn create-hero
   [cid pid] (->
     (create-card cid pid)
-    (#(update-cards % (fn [c] (if (= (:eid c) (:last-summoned %))
-      (-> c
-        (assoc :state :played))
-      c))))))
+    (assoc :state :played)
+    (assoc :eid (- pid 2))))
 
 (defn set-hero
   [s cid] (let [pid (:actor s)]
@@ -500,14 +550,14 @@
 
 (defn hero-max-health [s] (:max-health (current-hero s)))
 
-(defn hero-power [s] (:hero-power (current-hero s)))
+(defn hero-power [s] (:power (current-hero s)))
 
 (defn hero-attack [s] (:attack-this-turn (current-hero s)))
 
 ; probably need to move this up before actor-map
 (defn set-hero-power [s cid]
   (target s [:my :hero] #(update-target %
-    (fn [hero] (assoc hero :hero-power (card cid))))))
+    (fn [hero] (assoc hero :power (card cid))))))
 
 (defn is-friendly [s character] (= (:owner character) (:actor s)))
 

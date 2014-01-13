@@ -874,7 +874,7 @@
   :weapon {
     :attack 7
     :durability 1
-    :after-attacking (buff-self -1 1) ; todo, remember to interpret this too
+    :when-my-hero-attacks (buff-self -1 1) ; todo, remember to interpret this too
   }
 }
 {
@@ -2080,8 +2080,6 @@
   :class :druid
   :cost 5
   :spell (choose-one [195 653])
-    ; (target [:minion] (damage-target 5))
-    ; (target-all [:opponent :minion] (damage-target 2)))
 }
 {
   :id 372
@@ -2345,7 +2343,7 @@
   :cost 0
   ; question: does choose one force the target?
   ; todo: :self / poly
-  :spell (target [:minion] (give-target {:health 2 :taunt true}))
+  :spell (target [:self] (polymorph-target 45))
 }
 {
   :id 198
@@ -2420,7 +2418,7 @@
   :set :expert
   :class :druid
   :cost 0
-  :spell (target [:minion] (give-target :charge)) ; todo: :self / poly
+  :spell (target [:self] (polymorph-target 408))
 }
 {
   :id 38
