@@ -58,6 +58,8 @@ really need to distinguish spell damage buffed abilities.  arcane missiles needs
 a way to send more missiles by spell damage, too, (same with avenging wrath
 etc.)
 
+redo it in C once we find out that the JVM won't do it for us.
+
 ## function notes
 
 ### targeting

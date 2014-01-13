@@ -230,7 +230,7 @@
   :minion {
     :attack 5
     :health 8
-    :battlecry (choose-one "Demigod's Favor" "Shan'do's Lesson")
+    :battlecry (choose-one ["Demigod's Favor" "Shan'do's Lesson"])
       ; (target-all [:my :minion] (buff-target 2 2))
       ; (summon-minion [181 181])) ; 181 = Taunt Treant
   }
@@ -565,7 +565,7 @@
     :attack 8
     :health 8
     :properties [:cant-attack]
-    :end-of-my-turn (target-random [:opponent] (damage-target 8))
+    :end-of-my-turn #(target-random % [:opponent] (damage-target 8))
   }
 }
 {
@@ -577,7 +577,7 @@
   :minion {
     :attack 5
     :health 5
-    :deathrattle (target-random [:opponent :minion] mind-control-target)
+    :deathrattle #(target-random % [:opponent :minion] mind-control-target)
   }
 }
 {
@@ -665,7 +665,7 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose-one "Ancient Teachings" "Ancient Secrets")
+    :battlecry (choose-one ["Ancient Teachings" "Ancient Secrets"])
   }
 }
 {
@@ -678,7 +678,7 @@
   :minion {
     :attack 5
     :health 5
-    :battlecry (choose-one "Rooted" "Uproot")
+    :battlecry (choose-one ["Rooted" "Uproot"])
       ; (target :self #(-> % (give-target :taunt) (buff-target 0 5)))
       ; (buff-self 5 0))
   }
@@ -690,7 +690,7 @@
   :set :expert
   :class :paladin
   :cost 6
-  :spell (apply comp (repeat 8 (target-random [:opponent] (damage-target 1))))
+  :spell (apply comp (repeat 8 #(target-random % [:opponent] (damage-target 1))))
 }
 {
   :id 670
@@ -775,7 +775,7 @@
     :attack 1
     :health 1
     :type :beast
-    :battlecry (target-random [:my :undrawn :pirate] draw-target)
+    :battlecry #(target-random % [:my :undrawn :pirate] draw-target)
   }
 }
 {
@@ -838,9 +838,9 @@
   :set :expert
   :class :shaman
   :cost 3
-  :spell (target-random [:my :undrawn] #(-> %
+  :spell (fn [s] (target-random s [:my :undrawn] #(-> %
     (give-target {:use-cost -3})
-    (draw-target)))
+    (draw-target))))
 }
 {
   :id 237
@@ -936,10 +936,10 @@
   :set :expert
   :class :priest
   :cost 4
-  :spell (target-random [1 :opponent :undrawn :minion]
+  :spell (fn [s] (target-random s [1 :opponent :undrawn :minion]
     ; this does indeed not trigger battlecries.  so no jaraxxus hero, e.g.
     #(-> % (summon-minion (:id (current-target %))))
-    (summon-minion "Shadow of Nothing"))
+    (summon-minion "Shadow of Nothing")))
 }
 {
   :id 94
@@ -1000,7 +1000,7 @@
     :attack 5
     :health 6
     :type :demon
-    :battlecry (damage-hero 5)
+    :battlecry (target [:my :hero] (damage-target 5))
   }
 }
 {
@@ -1023,10 +1023,8 @@
   :set :expert
   :class :rogue
   :cost 0
-  ; how do I plan for this to work?  these get their own modifiers for each
-  ; time-dependent function (once-this-turn next-turn aura ...) on the state
-  ; object and are managed/handled appropriately?  seems needlessly complex...
-  :spell (once-this-turn (spells-cost #(- % 3)))
+  ; special case yay
+  :spell (target [:my :hero] (give-target :preparation))
 }
 {
   :id 496
@@ -1068,8 +1066,8 @@
   :class :priest
   :cost 3
   :spell #(if (= (:name (hero-power %)) "Mind Spike")
-    ((set-hero-power "Mind Shatter") %)
-    ((set-hero-power "Mind Spike") %))
+    (set-hero-power % "Mind Shatter")
+    (set-hero-power % "Mind Spike"))
 }
 {
   :id 50
@@ -1114,11 +1112,10 @@
   :cost 3
   :secret {
     ; before
-    :when-opponent-spell-cast #(if
-      (and (:minion (current-target %)) (is-friendly (current-target %)))
+    :when-opponent-spell-cast #(if (:minion (current-target %))
       (-> %
         (summon-minion 645) ; 645 = 1/3 Spellbender
-        (end-secret)))
+        (target [:last-summoned] redirect-attack-target)))
   }
 }
 {
@@ -1178,7 +1175,7 @@
   :minion {
     :attack 0
     :health 3
-    :start-of-my-turn (target-random [:my :drawn :minion] swap-with-target)
+    :start-of-my-turn #(target-random % [:my :drawn :minion] swap-with-target)
   }
 }
 {
@@ -1203,7 +1200,10 @@
   :class :shaman
   :cost 2
   :spell (target [:minion]
-    (give-target {:deathrattle #((summon-minion % (:id (self %))))}))
+    ; note: two of these do not summon two of the guy
+    ; (give-target {:deathrattle #(summon-minion % (:id (targeter %)))}))
+    ; so let's cheat with a boolean comper
+    (give-target :ancestral-spirit))
 }
 {
   :id 176
@@ -1330,7 +1330,7 @@
   :spell #(-> %
     (target [:my :weapon] (destroy-target))
     (target-all [:opponent]
-      (damage-target (actor-damage (first (filter-all % [:my :weapon]))))))
+      (damage-target (:attack (first (filter-all % [:my :weapon]))))))
 }
 {
   :id 7
@@ -1412,7 +1412,7 @@
   :class :mage
   :cost 3
   :secret {
-    :when-opponent-spell-cast (counter-spell)
+    :when-opponent-spell-cast #(assoc % :counterspell true)
   }
 }
 {
@@ -1456,7 +1456,7 @@
   :minion {
     :attack 1
     :health 4
-    :start-of-my-turn (target-random [:opponent] (damage-target 2))
+    :start-of-my-turn #(target-random % [:opponent] (damage-target 2))
   }
 }
 {
@@ -1482,7 +1482,7 @@
     :health 7
     :type :demon
     :properties [:charge]
-    :battlecry (target-random [2 :my :drawn] (destroy-target))
+    :battlecry #(target-random % [2 :my :drawn] (destroy-target))
   }
 }
 {
@@ -1605,6 +1605,7 @@
   :minion {
     :attack 4
     :health 4
+    ; before
     :when-my-spell-cast (draw-cards 1)
   }
 }
@@ -1616,7 +1617,7 @@
   :class :rogue
   :cost 3
   :spell (target [:opponent :hero] (damage-target 2))
-  :combo (once-my-next-turn (give-card "Headcrack"))
+  :combo (target [:my :hero] (give-target {:headcracks 1}))
 }
 {
   :id 457
@@ -1637,8 +1638,9 @@
   :class :paladin
   :cost 5
   ; let this be known as the first time I've restored to let
-  :spell (target [] #(let [s ((draw-cards 1) %)]
-    (-> s (damage-target (:cost (last-card-drawn s))))))
+  :spell (target [] (fn [s] (-> s
+    (draw-cards 1)
+    (damage-target (:cost (first (filter-all s [:my :undrawn])))))))
 }
 {
   :id 689
@@ -1701,9 +1703,7 @@
   :minion {
     :attack 2
     :health 4
-    :battlecry (choose-one "Moonfire" "Dispel")
-      ; (target [] (damage-target 2))
-      ; (target [:minion] (silence-target)))
+    :battlecry (choose-one ["Moonfire" "Dispel"])
   }
 }
 {
@@ -1716,7 +1716,7 @@
   :minion {
     :attack 4
     :health 3
-    :battlecry (once-this-turn (secrets-cost 0))
+    :battlecry (target [:my :hero] (give-target :kirin-tor-mage))
   }
 }
 {
@@ -1728,7 +1728,7 @@
   :minion {
     :attack 3
     :health 2
-    :when-my-minion-summoned (target-random [:opponent] (damage-target 1))
+    :when-my-minion-summoned #(target-random % [:opponent] (damage-target 1))
   }
 }
 {
@@ -1774,7 +1774,7 @@
   :minion {
     :attack 0
     :health 5
-    :start-of-my-turn (target-random [:my :damaged] (restore-health 3))
+    :start-of-my-turn #(target-random % [:my :damaged] (restore-health 3))
   }
 }
 {
@@ -1822,7 +1822,7 @@
   :set :expert
   :class :priest
   :cost 4
-  :spell (target-all [:opponent :minion] (silence-target))
+  :spell (target-all [:opponent :minion] silence-target)
 }
 {
   :id 127
@@ -1846,7 +1846,7 @@
   :minion {
     :attack 1
     :health 3
-    :end-of-my-turn (target-random [:my :minion {:not :self}]
+    :end-of-my-turn #(target-random % [:my :minion {:not :self}]
       (buff-target 1 0))
   }
 }
@@ -1859,8 +1859,8 @@
   :minion {
     :attack 3
     :health 3
-    :battlecry #(if (>= (count-minions [:opponent]) 4)
-      (target-random [:opponent :minion] mind-control-target))
+    :battlecry (fn [s] (if (>= (count-minions s [:opponent]) 4)
+      (target-random s [:opponent :minion] mind-control-target) s))
   }
 }
 {
@@ -1871,7 +1871,7 @@
   :class :hunter
   :cost 2
   :secret {
-    :when-my-hero-attacked (target-random [{:not :targeter}]
+    :when-my-hero-attacked #(target-random % [{:not :targeter}]
       redirect-attack-target)
   }
 }
@@ -1908,7 +1908,7 @@
   :set :expert
   :class :druid
   :cost 5
-  :spell (choose-one 485 58)
+  :spell (choose-one [485 58])
     ; (target [:my :hero] (give-target {:mana-crystal 2}))
     ; (draw-cards 3))
 }
@@ -2068,8 +2068,8 @@
     :attack 3
     :health 5
     :type :beast
-    :battlecry (target-random [:opponent :minion #(<= (:attack %) 2)]
-      destroy-target)
+    :battlecry (fn [s] (target-random s [:opponent :minion #(<= (:attack %) 2)]
+      destroy-target))
   }
 }
 {
@@ -2079,7 +2079,7 @@
   :set :expert
   :class :druid
   :cost 5
-  :spell (choose-one 195 653)
+  :spell (choose-one [195 653])
     ; (target [:minion] (damage-target 5))
     ; (target-all [:opponent :minion] (damage-target 2)))
 }
@@ -2194,7 +2194,7 @@
   :minion {
     :attack 2
     :health 1
-    :end-of-my-turn (target-random [:my :minion {:not :self}]
+    :end-of-my-turn #(target-random % [:my :minion {:not :self}]
       (buff-target 0 1))
   }
 }
@@ -2409,8 +2409,8 @@
     :health 3
     :type :pirate
     ; does not work with attack this turn, even on weapons! (e.g. heroic strike)
-    :battlecry #(let [attack (or 0 (:attack (:weapon (my-hero %))))]
-      (-> % (buff-self attack 0)))
+    :battlecry #(-> %
+      (buff-self (or 0 (:attack (first (filter-all % [:my :weapon])))) 0))
   }
 }
 {
@@ -2517,7 +2517,7 @@
   :set :expert
   :class :hunter
   :cost 3
-  :spell (target-random [:opponent :minion] destroy-target)
+  :spell #(target-random % [:opponent :minion] destroy-target)
 }
 {
   :id 318
@@ -2608,14 +2608,14 @@
   :quality :free
   :set :expert
   :class :druid
-  :spell (target [:minion] (silence-target))
+  :spell (target [:minion] silence-target)
 }
 {
   :id 261
   :name "Dread Corsair"
   :quality :common
   :set :expert
-  :cost #(- 4 (or 0 (:attack (:weapon (my-hero %)))))
+  :cost #(- 4 (or 0 (:attack (first (filter-all % [:my :weapon])))))
   :minion {
     :attack 3
     :health 3
@@ -2641,7 +2641,7 @@
   :minion {
     :attack 4
     :health 4
-    :battlecry (choose-one "Cat Form" "Bear Form")
+    :battlecry (choose-one ["Cat Form" "Bear Form"])
   }
 }
 ; next two are polymorph results of Cat Form / Bear Form.  not sure how the
@@ -2823,7 +2823,7 @@
   :class :shaman
   :cost 1
   :overload 2
-  :spell (target-random [2 :opponent :minion] (damage-target 2))
+  :spell #(target-random % [2 :opponent :minion] (damage-target 2))
 }
 {
   :id 99
@@ -2960,7 +2960,7 @@
     :attack 2
     :health 1
     :type :beast
-    :battlecry (target [:minion] (silence-target))
+    :battlecry (target [:minion] silence-target)
   }
 }
 {
@@ -3056,7 +3056,7 @@
     :attack 3
     :health 2
     :battlecry (apply comp (repeat 3
-      (target-random [{:not :self}] (damage-target 1))))
+      #(target-random % [{:not :self}] (damage-target 1))))
   }
 }
 {
@@ -3080,7 +3080,7 @@
   :set :expert
   :class :druid
   :cost 3
-  :spell (choose-one 430 133)
+  :spell (choose-one [430 133])
 }
 {
   :id 430
@@ -3168,7 +3168,7 @@
   :cost 0
   :spell (target [:minion] (give-target {
     :health 5 :attack 5
-    :start-of-my-turn (destroy-self)}))
+    :start-of-my-turn destroy-self}))
 }
 {
   :id 158
@@ -3180,7 +3180,7 @@
   :secret {
     :when-opponent-minion-attacks #(-> %
       (summon-minion "Defender")
-      (target [:last-summoned] (redirect-attack-target)))
+      (target [:last-summoned] redirect-attack-target))
   }
 }
 {
@@ -3221,7 +3221,7 @@
   :set :expert
   :class :druid
   :cost 2
-  :spell (choose-one "Summon a Panther" "Leader of the Pack")
+  :spell (choose-one ["Summon a Panther" "Leader of the Pack"])
 }
 {
   :id 170
@@ -3232,7 +3232,7 @@
   :cost 1
   :spell (target [:my :minion] (give-target {
     :health 4 :attack 4
-    :end-of-turn (destroy-self)}))
+    :end-of-turn destroy-self}))
 }
 {
   :id 138
@@ -3255,7 +3255,7 @@
   :minion {
     :attack 3
     :health 3
-    :enrage {:filter :self :windfury true :attack 1}
+    :enrage {:filter :self :windfury 1 :attack 1}
   }
 }
 {
@@ -3336,7 +3336,7 @@
   :set :expert
   :class :warlock
   :cost 3
-  :spell (target-random [2 :undrawn :demon]
+  :spell #(target-random % [2 :undrawn :demon]
     (draw-target) (give-card "Worthless Imp"))
 }
 {
@@ -3378,7 +3378,7 @@
   :set :expert
   :class :priest
   :cost 0
-  :spell (target [:minion] (silence-target))
+  :spell (target [:minion] silence-target)
 }
 {
   :id 648
@@ -3497,7 +3497,7 @@
   :minion {
     :attack 4
     :health 3
-    :battlecry (target [:minion] (silence-target))
+    :battlecry (target [:minion] silence-target)
   }
 }
 {
@@ -3635,10 +3635,10 @@
   :set :expert
   :class :priest
   :cost 3
-  :spell (target-random [2 :opponent :undrawn] #(-> %
+  :spell (fn [s] (target-random s [2 :opponent :undrawn] #(-> %
     (give-card (:id (current-target %))))
     ; use identity for the fallback -- thoughtsteal is usable in those cases
-    identity)
+    identity))
 }
 {
   :id 265
@@ -3675,7 +3675,7 @@
     :attack 2
     :health 2
     :properties [:charge]
-    :end-of-turn (destroy-self)
+    :end-of-turn destroy-self
   }
 }
 {
@@ -3813,7 +3813,7 @@
   :set :expert
   :class :druid
   :cost 2
-  :spell (choose-one 234 501)
+  :spell (choose-one [234 501])
 }
 {
   :id 234
@@ -4038,7 +4038,7 @@
   :class :warrior
   :cost 2
   ; todo: determine how to apply spell damage effects
-  :spell (target-random [2 :opponent :minion] (damage-target 2))
+  :spell #(target-random % [2 :opponent :minion] (damage-target 2))
 }
 {
   :id 260
@@ -4069,7 +4069,7 @@
   :class :warlock
   :cost 1
   :spell (target [:opponent :minion] (give-target
-    {:start-of-my-turn (destroy-self)}))
+    {:start-of-my-turn destroy-self}))
 }
 {
   :id 377
@@ -4196,7 +4196,7 @@
   :minion {
     :attack 0
     :health 4
-    :end-of-my-turn (target-random [:minion] (buff-target 1 1))
+    :end-of-my-turn #(target-random % [:minion] (buff-target 1 1))
   }
 }
 {
@@ -4228,7 +4228,7 @@
   :quality :common
   :set :missions
   :cost 3
-  :spell (apply comp (repeat 5 (target-random [:opponent] (damage-target 1))))
+  :spell (apply comp (repeat 5 #(target-random % [:opponent] (damage-target 1))))
 }
 {
   :id 455
@@ -4670,8 +4670,8 @@
   :set :basic
   :class :priest
   :cost 1
-  :spell (target-random [:opponent :drawn]
-    #(-> % (give-card (:id (current-target %)))))
+  :spell (fn [s] (target-random s [:opponent :drawn]
+    #(-> % (give-card (:id (current-target %))))))
 }
 {
   :id 30
@@ -4808,7 +4808,7 @@
   :minion {
     :attack 0
     :health 3
-    :start-of-my-turn (target-random [:minion {:not :self}]
+    :start-of-my-turn #(target-random % [:minion {:not :self}]
       (polymorph-target "Chicken"))
   }
 }
@@ -4833,7 +4833,7 @@
   :minion {
     :attack 0
     :health 3
-    :end-of-my-turn (target-random [:damaged] (restore-health 6))
+    :end-of-my-turn #(target-random % [:damaged] (restore-health 6))
   }
 }
 {
@@ -5005,6 +5005,7 @@
     :attack 2
     :health 1
     :type :beast
+    ; after
     :when-my-minion-summoned #(if (:beast (current-target %))
       (draw-cards 1))
   }
@@ -5106,7 +5107,7 @@
     :attack 2
     :health 5
     :type :beast
-    :aura {:filter [:my :beast] :charge true}
+    :aura {:filter [:my :beast] :charge 1}
   }
 }
 {
@@ -5231,7 +5232,7 @@
   :set :basic
   :class :mage
   :cost 1
-  :spell (apply comp (repeat 3 (target-random [:opponent] (damage-target 1))))
+  :spell (apply comp (repeat 3 #(target-random % [:opponent] (damage-target 1))))
 }
 {
   :id 167
@@ -5633,7 +5634,7 @@
   :set :basic
   :class :hunter
   :cost 4
-  :spell (target-random [2 :opponent :minion] (damage-target 3))
+  :spell #(target-random % [2 :opponent :minion] (damage-target 3))
 }
 {
   :id 55
@@ -5669,6 +5670,7 @@
   :minion {
     :attack 1
     :health 3
+    ; after
     :when-minion-healed (draw-cards 1)
   }
 }
@@ -5909,7 +5911,7 @@
     :attack 4
     :health 3
     :type :demon
-    :battlecry (target-random [:my :drawn] destroy-target)
+    :battlecry #(target-random % [:my :drawn] destroy-target)
   }
 }
 {
@@ -6027,7 +6029,7 @@
   :minion {
     :attack 2
     :health 3
-    :aura {:filter [:my :minion] :charge true}
+    :aura {:filter [:my :minion] :charge 1}
   }
 }
 {
