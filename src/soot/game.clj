@@ -14,7 +14,7 @@
   "Branches between the supplied functions on state"
   [s fns labels]
   (if (first fns)
-    (let [choice 0 ; (rand-int (count fns))
+    (let [choice (rand-int (dec (count fns)))
           ; _ (pprint s)
           ; _ (pprint fns)
           ; _ (pprint labels)
@@ -62,9 +62,9 @@
     :heroes (apply hash-map (interleave [0 1]
       (map create-hero [first-hero second-hero] [0 1])))
     ; everything else - mix together the players to keep the structure flat
-    :cards (map (fn [card eid] (assoc-in card [:eid] eid)) (shuffle (mapcat
+    :cards (vec (map (fn [card eid] (assoc-in card [:eid] eid)) (shuffle (mapcat
       (fn [v] (let [[pid deck] v] (map create-card deck (repeat pid))))
-      [[0 first-deck] [1 second-deck]])) (range))
+      [[0 first-deck] [1 second-deck]])) (range)))
   }
   (#(assoc % :next-eid (count (:cards %))))
   (draw-cards 3)

@@ -1,6 +1,6 @@
 (in-ns 'soot.game)
 
-(defn all-things [s] (flatten [(vals (:heroes s)) (:cards s)]))
+(defn all-things [s] (concat (vals (:heroes s)) (:cards s)))
 
 (defn thing-by-eid [s eid] (first (filter #(= (:eid %) eid) (all-things s))))
 
@@ -12,7 +12,7 @@
 
 (defn update-cards
   "Applies f to each card in state"
-  [s f] (update-in s [:cards] (partial map f)))
+  [s f] (update-in s [:cards] (partial mapv f)))
 
 (defn update-last-summoned
   [s f] (update-cards s (fn [c] (if (= (:eid c) (:last-summoned s))
@@ -48,7 +48,7 @@
   [s f] (let [[type n] (:target s)] (cond
     (= type :hero) (update-in s [:heroes n] f)
     (= type :card) (update-in s [:cards]
-      (partial map (fn [i c] (if (= i n) (f c) c)) (range))))))
+      (partial mapv (fn [i c] (if (= i n) (f c) c)) (range))))))
 
 (defn set-target
   "Sets state on the current target"
@@ -96,11 +96,12 @@
 
 (defn filter-pred
   [s filt] (let [pred (filter-map filt)]
-    (if pred (pred s) (if (map? filt)
-      ; Thank god for nullpointerexceptions or I'll have no idea if this is okay
-      ((filter-map (first (keys filt)))
-        (filter-pred s (or (filter-map (first (vals filt))) (first (vals filt)))))
-      filt))))
+    (if pred
+      (pred s)
+      (if (map? filt)
+        (let [[[k v]] (seq filt)]
+          ((filter-map k) (filter-pred s (or (filter-map v) v))))
+        filt))))
 
 (defn add-default-filters
   [filters] (cond->> filters
@@ -118,11 +119,10 @@
     (:spell (targeter s)) (cons {:not :spell-immunity})))
 
 (defn filter-all
-  [s filters] (let [
-    fs (add-default-filters (flatten [filters]))
-    ] (do (filter (fn
-      [c] (every? #(% c) (map
-        filter-pred (repeat s) fs))) (all-things s)))))
+  [s filters]
+  (let [fs (add-default-filters (flatten [filters]))
+        pred (apply every-pred (map filter-pred (repeat s) fs))]
+    (filter pred (all-things s))))
 
 (defn trigger-target
   "Triggers an event on the current target.  If the event returns nil, trigger
@@ -146,10 +146,11 @@
   "Gives n damage to the current target, triggering damage-based secrets"
   ([s n]
     (let [target (current-target s)
+          _ (if (not n) (do (println "damage-target called with fucked up shit") (pprint n) (pprint s)))
           spell? (:spell (targeter s))
-          spell-damage (apply + (map
+          spell-damage (or (apply + (map
             :spell-damage
-            (filter-all s [:my :spell-damage])))
+            (filter-all s [:my :spell-damage]))) 0)
           damage (if spell? (+ spell-damage n) n)
           damaged-armor (- (or (:armor target) 0) damage)
           minimum-health (or (:minimum-health target) 0)
@@ -176,6 +177,9 @@
   (assoc :target (target-info t))))
 
 (defn pop-target [s] (-> s
+  ((fn [s] (if (:actor s) s (do
+    (pprint s)
+    (throw (Exception. "Invalid state"))))))
   (assoc :target (first (:target-stack s)))
   (update-in [:target-stack] rest)))
 
@@ -398,8 +402,8 @@
       (assoc :left nil)
       (assoc :right nil))))
     (update-cards (fn [c] (cond-> c
-      (= (:eid c) (:left target)) (assoc c :right (:right target))
-      (= (:eid c) (:right target)) (assoc c :left (:left target))))))))
+      (= (:eid c) (:left target)) (assoc :right (:right target))
+      (= (:eid c) (:right target)) (assoc :left (:left target))))))))
 
 (defn return-target
   ([s] (-> s
@@ -421,8 +425,8 @@
         (assoc :left (:left (targeter s)))
         (assoc :right (:right (targeter s))))))
       (update-cards (fn [c] (cond-> c
-        (= (:eid c) (:left (targeter s))) (assoc c :right target-eid)
-        (= (:eid c) (:right (targeter s))) (assoc c :left target-eid))))
+        (= (:eid c) (:left (targeter s))) (assoc :right target-eid)
+        (= (:eid c) (:right (targeter s))) (assoc :left target-eid))))
       (trigger-all :after-summoned))))
 
 ; (defn && [& bools] (every? identity bools))
@@ -704,8 +708,11 @@
             (damage-target (:attack minion))
             (update-targeter #(assoc % :times-attacking (inc times-attacking)))
             (push-targeter (:eid (current-target s)))
-            (target-entity minion (fn [st] (-> st
-              (damage-target (:attack (targeter st))))))
+            (target-entity minion
+              (fn [st] (let [rec-damage (or (:attack (targeter st)) 0)]
+                (if (> rec-damage 0)
+                  (damage-target st rec-damage)
+                  st))))
             (pop-targeter)
             (trigger-all :after-attacked))))
           pop-targeter)
@@ -727,9 +734,9 @@
         (assoc :right (:right tar))))
       (update-cards (fn [c] (cond-> c
         ; update the target's right
-        (= (:eid c) target-eid) (assoc c :right targeter-eid)
+        (= (:eid c) target-eid) (assoc :right targeter-eid)
         ; update the target's right's left
-        (= (:eid c) (:right tar)) (assoc c :left targeter-eid))))
+        (= (:eid c) (:right tar)) (assoc :left targeter-eid))))
       (target-entity (targeter s) #(trigger-target % :battlecry))
       (trigger-all :after-summoned))))
 
@@ -807,7 +814,7 @@
             (target-entity hero
               (fn [st] (let [rec-damage (or (:attack (targeter st)) 0)]
                 (if (> rec-damage 0)
-                  (damage-target rec-damage)
+                  (damage-target st rec-damage)
                   st))))
             (pop-targeter)
             (trigger-all :after-attacked))))
@@ -839,6 +846,14 @@
             st
             (do
               (println "CHOOSE RETURNED NIL")
+              (pprint choices)
+              (pprint labels)
+              (pprint s)
+              (pprint st) nil))))
+          ((fn [st] (if (vector? (:cards st))
+            st
+            (do
+              (println ":cards not a vector")
               (pprint choices)
               (pprint labels)
               (pprint s)
