@@ -251,7 +251,7 @@
 (defn tick-fatigue
   "Does a tick of fatigue on the current player"
   [state] (target state [:my :hero] (fn [s] (-> s
-    (update-target (fn [hero] (update-in hero [:fatigue #(+ 1 (or % 0))])))
+    (update-target (fn [hero] (update-in hero [:fatigue] #(+ 1 (or % 0)))))
     (#(damage-target % (get-in % [:heroes (:actor %) :fatigue])))))))
 
 (defn cards-in-hand [s] (count (filter-all s [:my :drawn])))
