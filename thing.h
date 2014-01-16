@@ -1,8 +1,5 @@
 #include <stdint.h>
 
-struct State;
-#define _State struct State *state
-
 typedef struct Thing {
   uint16_t id;
   uint8_t attack;
@@ -47,14 +44,14 @@ typedef struct Thing {
   uint8_t attack_this_turn;
   uint8_t max_health;
   // 8*8 = 64 bytes
-  void (*on_attacked)(_State);
-  void (*on_damaged)(_State);
-  void (*on_healed)(_State);
-  void (*on_played)(_State);
-  void (*on_summoned)(_State);
-  void (*on_destroyed)(_State);
-  void (*on_turn_start)(_State);
-  void (*on_turn_end)(_State);
+  void *on_attacked;
+  void *on_damaged;
+  void *on_healed;
+  void *on_played;
+  void *on_summoned;
+  void *on_destroyed;
+  void *on_turn_start;
+  void *on_turn_end;
 } Thing;
 
 /* unsafe bitfields macro - name, type, field, size, offset */

@@ -6,8 +6,8 @@ CFLAGS += -std=c99 -O3
 
 all: soot
 
-soot: soot.c state.h thing.h
-	${CC} -o $@ soot.c ${CFLAGS} ${LDFLAGS}
+soot: soot.c state.h card.h card.c thing.h partial.h partial.c
+	${CC} -o $@ card.c partial.c soot.c ${CFLAGS} ${LDFLAGS}
 
 clean:
 	rm -f soot *.o
