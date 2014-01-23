@@ -1,3 +1,12 @@
+# c
+
+only build on windows x64 c99 gcc (i use tdm-gcc); could be rewritten for not
+windows / not 64-bit, but meh
+
+oh yeah, -nostdlib #yolo
+
+# clojure
+
 - tray contains mana crystals (current/max "spent+unspent")
 - hero character has health, armor, hero power, weapon?
 - hand contains cards, limit of 10 (new cards destroyed)

@@ -1,3 +1,6 @@
+#ifndef _thing_h
+#define _thing_h
+
 #include <stdint.h>
 
 typedef struct Thing {
@@ -43,6 +46,7 @@ typedef struct Thing {
   int8_t minions_cost;
   uint8_t attack_this_turn;
   uint8_t max_health;
+  uint32_t has_partials; // helps with reference counting when we copy states
   // 8*8 = 64 bytes
   void *on_attacked;
   void *on_damaged;
@@ -98,3 +102,15 @@ _bitfield(headcracks, Thing, flags2, 3, 21);
 _bitfield(auchenai_soulpriest, Thing, flags2, 1, 24);
 _bitfield(counterspell, Thing, flags2, 1, 25);
 _bitfield(kirin_tor_mage, Thing, flags2, 1, 26);
+
+/* has_partials bitfields */
+_bitfield(has_on_attacked, Thing, has_partials, 1, 0);
+_bitfield(has_on_damaged, Thing, has_partials, 1, 1);
+_bitfield(has_on_healed, Thing, has_partials, 1, 2);
+_bitfield(has_on_played, Thing, has_partials, 1, 3);
+_bitfield(has_on_summoned, Thing, has_partials, 1, 4);
+_bitfield(has_on_destroyed, Thing, has_partials, 1, 5);
+_bitfield(has_on_turn_start, Thing, has_partials, 1, 6);
+_bitfield(has_on_turn_end, Thing, has_partials, 1, 7);
+
+#endif // _thing_h

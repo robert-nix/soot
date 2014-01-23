@@ -1,3 +1,6 @@
+#ifndef _card_h
+#define _card_h
+
 #include <stdint.h>
 #include "partial.h"
 
@@ -73,10 +76,6 @@ typedef struct Card {
   void *on_turn_end;
 } Card;
 
-/*
-static void test(void *);
-static void test(void *s) {
-  ((combinator*)s)[0](nil);
-}
-*/
 Card cards[524];
+
+#endif // _card_h

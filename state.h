@@ -1,3 +1,6 @@
+#ifndef _state_h
+#define _state_h
+
 #include <stdint.h>
 #include "thing.h"
 
@@ -16,3 +19,5 @@ typedef struct State {
   uint8_t spells_cost_this_turn;
   uint8_t spells_cost_next_turn;
 } State;
+
+#endif // _state_h

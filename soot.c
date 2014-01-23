@@ -1,25 +1,36 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "support.h"
 #include "state.h"
 #include "card.h"
+#include "partial.h"
 
-int main(int argc, char **argv) {
-  printf("meow\n");
-  printf("%d %s\n", argc, *argv);
-  printf("sizeof(Thing)=%d, sizeof(State)=%d, sizeof(Card)=%d\n",
-    sizeof(Thing), sizeof(State), sizeof(Card));
-  Thing t;
-  set_owner(&t, 1);
-  printf("owner: %d\n", get_owner(&t));
-  set_state(&t, 3);
-  printf("state: %d\n", get_state(&t));
-  set_kirin_tor_mage(&t, 1);
-  printf("kirin_tor_mage: %d\n", get_kirin_tor_mage(&t));
-  printf("chicken=%s\n", cards[0].name);
-  Partial *p = new_partial(partial_test, (void *)1, (void *)2, (void *)3);
-  intptr_t *stuff = (intptr_t *)apply_partial(p, (void *)0);
-  printf("pointer=%p\n", p);
-  printf("stuff=[%d, %d, %d, %d]\n", stuff[0], stuff[1], stuff[2], stuff[3]);
-  return 0;
+#include <Windows.h>
+#include <asmlibran.h>
+
+void _main(void);
+void _main(void) {
+  init_large_pages();
+
+  Partial_pool *pool = partial_pool_new();
+  Partial *p = partial_new(pool, (Applicee *)partial_test);
+  partial_bind_value(p, 1, 2);   // * 2
+  partial_bind_value(p, 2, -15); // + -15
+  partial_bind_value(p, 3, 4);   // * 4
+  print_s("pointer="); print_p((intptr_t)p); print_s("\n");
+  uint64_t stuff = (uint64_t)partial_apply(p, (void *)10);
+  print_s("stuff="); print_p(stuff); print_s("\n");
+
+  print_s("sizeof(State)="); print_p(sizeof(State)); print_s(", ");
+  print_s("sizeof(Thing)="); print_p(sizeof(Thing)); print_s(", ");
+  print_s("sizeof(Card)="); print_p(sizeof(Card)); print_s(", ");
+  print_s("sizeof(Partial)="); print_p(sizeof(Partial)); print_s("\n");
+  print_s("page_size="); print_p(get_page_size()); print_s("\n");
+  SFMTgenRandomInit(0x752, 0);
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  print_p((intptr_t)SFMTgenIRandom(0, 0x100000)); print_s("\n");
+  ExitProcess(0);
 }
